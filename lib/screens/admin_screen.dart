@@ -101,6 +101,36 @@ class AdminScreen extends StatefulWidget {
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
+class AdminPost {
+  final String id;
+  final String title;
+  final String content;
+  final String authorName;
+  final String type; // 'announcement' or 'question'
+  final DateTime createdAt;
+  final String courseName;
+
+  AdminPost({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.authorName,
+    required this.type,
+    required this.createdAt,
+    required this.courseName,
+  });
+
+  factory AdminPost.fromJson(Map<String, dynamic> j) => AdminPost(
+    id: (j['_id'] ?? j['id']).toString(),
+    title: j['title'] ?? '',
+    content: j['content'] ?? '',
+    authorName: j['authorId'] is Map ? (j['authorId']['name'] ?? 'Unknown') : (j['authorName'] ?? 'Unknown'),
+    type: j['type'] ?? 'announcement',
+    createdAt: j['createdAt'] != null ? DateTime.parse(j['createdAt'].toString()) : DateTime.now(),
+    courseName: j['course'] ?? j['courseId'] ?? 'General',
+  );
+}
+
 class _AdminScreenState extends State<AdminScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
@@ -108,13 +138,14 @@ class _AdminScreenState extends State<AdminScreen>
   List<AdminCourse> _courses  = [];
   List<AdminUser>   _teachers = [];
   List<AdminUser>   _students = [];
+  List<AdminPost>   _posts    = [];
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 3, vsync: this);
+    _tabCtrl = TabController(length: 4, vsync: this);
     _load();
   }
 
@@ -133,6 +164,7 @@ class _AdminScreenState extends State<AdminScreen>
         ApiService.adminGetCourses(),
         ApiService.adminGetUsersByRole('teacher'),
         ApiService.adminGetUsersByRole('student'),
+        _loadPosts(),
       ]);
 
       if (mounted) {
@@ -140,6 +172,7 @@ class _AdminScreenState extends State<AdminScreen>
           _courses  = (results[0] as List).map((e) => AdminCourse.fromJson(e as Map<String, dynamic>)).toList();
           _teachers = (results[1] as List).map((e) => AdminUser.fromJson(e as Map<String, dynamic>)).toList();
           _students = (results[2] as List).map((e) => AdminUser.fromJson(e as Map<String, dynamic>)).toList();
+          _posts    = (results[3] as List).map((e) => AdminPost.fromJson(e as Map<String, dynamic>)).toList();
           _loading  = false;
         });
       }
@@ -150,9 +183,71 @@ class _AdminScreenState extends State<AdminScreen>
           _courses  = List.from(_mockCourses);
           _teachers = List.from(_mockTeachers);
           _students = List.from(_mockStudents);
+          _posts    = [];
           _loading  = false;
         });
       }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadPosts() async {
+    try {
+      final announcements = await ApiService.getAnnouncements();
+      return announcements.map((ann) => {...ann, 'type': 'announcement'} as Map<String, dynamic>).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> _deletePost(AdminPost post) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 22),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(child: Text('Delete Post', overflow: TextOverflow.ellipsis)),
+        ]),
+        content: RichText(
+          text: TextSpan(
+            style: const TextStyle(fontSize: 14, color: AppColors.textPrimary, height: 1.5),
+            children: [
+              const TextSpan(text: 'Are you sure you want to permanently delete "'),
+              TextSpan(text: post.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const TextSpan(text: '"? This cannot be undone.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final result = post.type == 'announcement'
+          ? await ApiService.adminDeleteAnnouncement(announcementId: int.parse(post.id))
+          : await ApiService.adminDeleteQuestion(questionId: post.id);
+
+      if (result['success'] == true) {
+        setState(() => _posts.removeWhere((p) => p.id == post.id));
+        _showSnack('Post deleted successfully', Colors.red);
+      } else {
+        _showSnack(result['message']?.toString() ?? 'Failed to delete post', Colors.red);
+      }
+    } catch (e) {
+      _showSnack('Could not delete post: $e', Colors.red);
     }
   }
 
@@ -320,91 +415,94 @@ class _AdminScreenState extends State<AdminScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(children: [
-        // ── Header ──────────────────────────────────────────────────────
-        GradientHeader(
-          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E40AF), Color(0xFF1E1B4B)]),
-          child: SafeArea(bottom: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Admin Panel',
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text('Signed in as ${auth.name.isNotEmpty ? auth.name : auth.email}',
-                      style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13)),
-                ])),
-                // Refresh button
-                GestureDetector(
-                  onTap: _load,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
-                    ),
-                    child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 18),
-              // Summary stats
-              if (!_loading) _StatRow(
-                courses:  _courses.length,
-                teachers: _teachers.length,
-                students: _students.length,
-                unassigned: _courses.where((c) => c.teacherId == null).length,
-              ),
-            ]),
-          )),
-        ),
-
-        // ── Tab bar ──────────────────────────────────────────────────────
-        Container(
-          color: Colors.white,
-          child: TabBar(
-            controller: _tabCtrl,
-            labelColor: AppColors.violet,
-            unselectedLabelColor: AppColors.textSecondary,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            indicatorColor: AppColors.violet,
-            indicatorWeight: 3,
-            tabs: [
-              Tab(text: 'Courses (${_courses.length})'),
-              Tab(child: _TabLabel(
-                text: 'Teachers',
-                count: _teachers.length,
-                pending: _teachers.where((u) => !u.approved).length,
-              )),
-              Tab(child: _TabLabel(
-                text: 'Students',
-                count: _students.length,
-                pending: _students.where((u) => !u.approved).length,
-              )),
-            ],
-          ),
-        ),
-
-        // ── Content ───────────────────────────────────────────────────────
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? _ErrorState(message: _error!, onRetry: _load)
-                  : TabBarView(controller: _tabCtrl, children: [
-                      _CourseTab(
-                        courses: _courses,
-                        students: _students,
-                        onAssignTeacher:  _showAssignTeacher,
-                        onAssignStudents: _showAssignStudents,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header and Tab bar (not scrollable)
+            GradientHeader(
+              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E40AF), Color(0xFF1E1B4B)]),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('Admin Panel',
+                          style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 2),
+                      Text('Signed in as ${auth.name.isNotEmpty ? auth.name : auth.email}',
+                          style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13)),
+                    ])),
+                    // Refresh button
+                    GestureDetector(
+                      onTap: _load,
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        ),
+                        child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
                       ),
-                      _UserTab(users: _teachers, role: 'teacher', onApprove: _approveUser, onDelete: _deleteUser),
-                      _UserTab(users: _students, role: 'student', onApprove: _approveUser, onDelete: _deleteUser),
-                    ]),
+                    ),
+                  ]),
+                  const SizedBox(height: 18),
+                  // Summary stats
+                  if (!_loading) _StatRow(
+                    courses:  _courses.length,
+                    teachers: _teachers.length,
+                    students: _students.length,
+                    unassigned: _courses.where((c) => c.teacherId == null).length,
+                  ),
+                ]),
+              ),
+            ),
+            // Tab bar
+            Container(
+              color: Colors.white,
+              child: TabBar(
+                controller: _tabCtrl,
+                labelColor: AppColors.violet,
+                unselectedLabelColor: AppColors.textSecondary,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                indicatorColor: AppColors.violet,
+                indicatorWeight: 3,
+                isScrollable: false,
+                tabs: [
+                  Tab(text: 'Courses (${_courses.length})'),
+                  Tab(child: _TabLabel(
+                    text: 'Teachers',
+                    count: _teachers.length,
+                    pending: _teachers.where((u) => !u.approved).length,
+                  )),
+                  Tab(child: _TabLabel(
+                    text: 'Students',
+                    count: _students.length,
+                    pending: _students.where((u) => !u.approved).length,
+                  )),
+                ],
+              ),
+            ),
+            // Content area (scrollable)
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? _ErrorState(message: _error!, onRetry: _load)
+                      : TabBarView(controller: _tabCtrl, children: [
+                          _CourseTab(
+                            courses: _courses,
+                            students: _students,
+                            onAssignTeacher:  _showAssignTeacher,
+                            onAssignStudents: _showAssignStudents,
+                          ),
+                          _UserTab(users: _teachers, role: 'teacher', onApprove: _approveUser, onDelete: _deleteUser),
+                          _UserTab(users: _students, role: 'student', onApprove: _approveUser, onDelete: _deleteUser),
+                        ]),
+            ),
+          ],
         ),
-      ]),
+      ),
     );
   }
 }
@@ -1117,13 +1215,13 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(children: [
-    _StatBox(value: '$courses',    label: 'Courses'),
-    const SizedBox(width: 8),
-    _StatBox(value: '$teachers',   label: 'Teachers'),
-    const SizedBox(width: 8),
-    _StatBox(value: '$students',   label: 'Students'),
-    const SizedBox(width: 8),
-    _StatBox(value: '$unassigned', label: 'No Teacher', warn: unassigned > 0),
+    Expanded(child: _StatBox(value: '$courses', label: 'Courses')),
+    const SizedBox(width: 6),
+    Expanded(child: _StatBox(value: '$teachers', label: 'Teachers')),
+    const SizedBox(width: 6),
+    Expanded(child: _StatBox(value: '$students', label: 'Students')),
+    const SizedBox(width: 6),
+    Expanded(child: _StatBox(value: '$unassigned', label: 'No Teacher', warn: unassigned > 0)),
   ]);
 }
 
@@ -1133,23 +1231,37 @@ class _StatBox extends StatelessWidget {
   const _StatBox({required this.value, required this.label, this.warn = false});
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(
-        color: warn && value != '0'
-            ? Colors.orange.withOpacity(0.25)
-            : Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: Column(children: [
-        Text(value, style: TextStyle(
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+    decoration: BoxDecoration(
+      color: warn && value != '0'
+          ? Colors.orange.withOpacity(0.25)
+          : Colors.white.withOpacity(0.15),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.white.withOpacity(0.3)),
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
             color: warn && value != '0' ? Colors.orange.shade200 : Colors.white,
-            fontSize: 20, fontWeight: FontWeight.bold)),
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 10)),
-      ]),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 9,
+          ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+      ],
     ),
   );
 }
@@ -1193,6 +1305,206 @@ class _Empty extends StatelessWidget {
     const SizedBox(height: 14),
     Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
   ]));
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// POSTS TAB (Announcements & Q&A)
+// ════════════════════════════════════════════════════════════════════════════
+
+class _PostsTab extends StatefulWidget {
+  final List<AdminPost> posts;
+  final void Function(AdminPost) onDelete;
+  const _PostsTab({required this.posts, required this.onDelete});
+
+  @override
+  State<_PostsTab> createState() => _PostsTabState();
+}
+
+class _PostsTabState extends State<_PostsTab> {
+  final _search = TextEditingController();
+  String _query = '';
+  String _typeFilter = 'all'; // 'all', 'announcement', 'question'
+
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() => setState(() => _query = _search.text));
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  List<AdminPost> get _filtered {
+    final base = _typeFilter == 'all'
+        ? widget.posts
+        : widget.posts.where((p) => p.type == _typeFilter).toList();
+    if (_query.isEmpty) return base;
+    return base.where((p) =>
+        p.title.toLowerCase().contains(_query.toLowerCase()) ||
+        p.content.toLowerCase().contains(_query.toLowerCase()) ||
+        p.authorName.toLowerCase().contains(_query.toLowerCase())).toList();
+  }
+
+  static const _grads = [
+    AppGradients.orange, AppGradients.cyan, AppGradients.violet, AppGradients.emerald,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filtered;
+
+    return Column(children: [
+      // ── Filter chips ────────────────────────────────────────────────────
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Row(children: [
+          _FilterChip(
+            label: 'All',
+            active: _typeFilter == 'all',
+            onTap: () => setState(() => _typeFilter = 'all'),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Announcements',
+            active: _typeFilter == 'announcement',
+            onTap: () => setState(() => _typeFilter = 'announcement'),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Questions',
+            active: _typeFilter == 'question',
+            onTap: () => setState(() => _typeFilter = 'question'),
+          ),
+        ]),
+      ),
+
+      // ── Search bar ──────────────────────────────────────────────────────
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: TextField(
+            controller: _search,
+            decoration: InputDecoration(
+              hintText: 'Search posts...',
+              hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.violet, size: 20),
+              suffixIcon: _query.isNotEmpty
+                  ? GestureDetector(
+                      onTap: () { _search.clear(); setState(() => _query = ''); },
+                      child: const Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 18))
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ),
+      ),
+
+      // ── Posts list ──────────────────────────────────────────────────────
+      Expanded(
+        child: filtered.isEmpty
+            ? _Empty(icon: Icons.article_rounded, label: 'No posts found')
+            : ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (_, i) {
+                  final p = filtered[i];
+                  final grad = _grads[p.id.hashCode.abs() % _grads.length];
+                  final isAnnouncement = p.type == 'announcement';
+
+                  return GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    child: Row(children: [
+                      // Icon
+                      Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          gradient: grad,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [BoxShadow(
+                            color: grad.colors.first.withOpacity(0.3),
+                            blurRadius: 8,
+                          )],
+                        ),
+                        child: Center(child: Icon(
+                          isAnnouncement ? Icons.notifications_rounded : Icons.help_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        )),
+                      ),
+                      const SizedBox(width: 14),
+                      // Content
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(p.title,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 3),
+                        Text('by ${p.authorName} • ${p.courseName}',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 4),
+                        Text(p.content,
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ])),
+                      const SizedBox(width: 8),
+                      // Delete button
+                      GestureDetector(
+                        onTap: () => widget.onDelete(p),
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 16),
+                        ),
+                      ),
+                    ]),
+                  );
+                },
+              ),
+      ),
+    ]);
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _FilterChip({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: active ? AppGradients.violet : null,
+        color: active ? null : AppColors.background,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: active ? AppColors.violet : AppColors.border,
+          width: 1.5,
+        ),
+      ),
+      child: Text(label, style: TextStyle(
+        fontSize: 12, fontWeight: FontWeight.bold,
+        color: active ? Colors.white : AppColors.textSecondary,
+      )),
+    ),
+  );
 }
 
 class _ErrorState extends StatelessWidget {

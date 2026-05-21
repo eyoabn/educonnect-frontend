@@ -4,51 +4,6 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
-final _mockAnnouncements = [
-  Announcement(
-    id: 1,
-    author: 'Dr. Sarah Johnson',
-    title: 'Assignment 3 Posted',
-    content:
-        'The third assignment on calculus has been posted. Please check the materials section. Due date: Friday, May 2nd.',
-    timestamp: '2 hours ago',
-    date: 'Apr 26, 2026',
-    category: 'assignment',
-    pinned: true,
-  ),
-  Announcement(
-    id: 2,
-    author: 'Dr. Sarah Johnson',
-    title: 'Office Hours Update',
-    content:
-        "This week's office hours will be moved to Thursday 3-5 PM instead of Wednesday.",
-    timestamp: '1 day ago',
-    date: 'Apr 25, 2026',
-    category: 'general',
-    starred: true,
-  ),
-  Announcement(
-    id: 3,
-    author: 'Dr. Sarah Johnson',
-    title: 'Midterm Results Posted',
-    content:
-        'Midterm exam results are now available. Great work everyone! The class average was 82%.',
-    timestamp: '3 days ago',
-    date: 'Apr 23, 2026',
-    category: 'grade',
-  ),
-  Announcement(
-    id: 4,
-    author: 'Dr. Sarah Johnson',
-    title: 'Study Resources',
-    content:
-        "I've uploaded additional study materials for the upcoming exam. Check the materials section.",
-    timestamp: '1 week ago',
-    date: 'Apr 21, 2026',
-    category: 'resource',
-  ),
-];
-
 class AnnouncementsScreen extends StatefulWidget {
   final Course course;
   const AnnouncementsScreen({super.key, required this.course});
@@ -81,46 +36,25 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
     try {
-      final data = await ApiService.getAnnouncements(widget.course.id.toString());
-      if (mounted) setState(() {
-        _all = data.map((a) {
-          String authorName = 'Unknown';
-          if (a is Map && a['authorId'] is Map) {
-            authorName = a['authorId']['name'] ?? 'Unknown';
-          } else if (a is Map && a['author'] is String) {
-            authorName = a['author'];
-          }
-
-          DateTime? dateParsed;
-          if (a['createdAt'] != null) {
-            dateParsed = DateTime.tryParse(a['createdAt']);
-          }
-          String formattedDate = 'Recently';
-          if (dateParsed != null) {
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            formattedDate = '${months[dateParsed.month - 1]} ${dateParsed.day}, ${dateParsed.year}';
-          }
-
-          return Announcement(
-            id: a['id'] as int? ?? 0,
-            author: authorName,
-            title: a['title'] as String? ?? '',
-            content: a['content'] as String? ?? '',
-            timestamp: formattedDate,
-            date: formattedDate,
-            category: a['category'] as String? ?? 'general',
-            pinned: a['pinned'] as bool? ?? false,
-            starred: a['starred'] as bool? ?? false,
-          );
-        }).toList();
-        _loading = false;
-        _applyFilter();
-      });
+      final data = await ApiService.getAnnouncements(widget.course.id);
+      if (mounted) {
+        setState(() {
+          _all = data.map<Announcement>((a) => Announcement.fromJson(a)).toList();
+          _loading = false;
+          _applyFilter();
+        });
+      }
     } catch (e) {
-      // ignore: avoid_print
-      print('Announcements load error: $e');
-      if (mounted) setState(() { _all = _mockAnnouncements; _loading = false; _applyFilter(); });
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _all = [];
+          _applyFilter();
+        });
+      }
     }
   }
 
@@ -129,11 +63,11 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     final fv = _filterValues[_filterIndex];
     setState(() {
       _filtered = _all.where((a) {
-        final matchFilter = fv == 'all' || a.category == fv;
-        final matchSearch = q.isEmpty ||
-            a.title.toLowerCase().contains(q) ||
-            a.content.toLowerCase().contains(q);
-        return matchFilter && matchSearch;
+        final matchFilter = fv == 'all' || (a.category) == fv;
+        final searchTerm = q.isEmpty ||
+            (a.title).toLowerCase().contains(q) ||
+            (a.content).toLowerCase().contains(q);
+        return matchFilter && searchTerm;
       }).toList();
     });
   }

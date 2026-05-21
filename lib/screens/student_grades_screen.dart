@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../models/models.dart';
@@ -24,23 +27,26 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 400)); // Simulate API
-    if (mounted) {
-      setState(() {
-        _grades.clear();
-        _grades.addAll([
-          {'id': '1', 'assignment': 'Math Assignment 1', 'course': 'Mathematics 101', 'grade': 88,  'maxGrade': 100, 'feedback': 'Good work! Strong understanding of derivatives.', 'status': 'graded',  'date': 'Apr 10, 2026', 'gi': 0},
-          {'id': '2', 'assignment': 'Math Assignment 2', 'course': 'Mathematics 101', 'grade': 92,  'maxGrade': 100, 'feedback': 'Excellent! Perfect score on integration.', 'status': 'graded',  'date': 'Apr 18, 2026', 'gi': 0},
-          {'id': '3', 'assignment': 'Math Assignment 3', 'course': 'Mathematics 101', 'grade': null, 'maxGrade': 100, 'feedback': '', 'status': 'pending', 'date': 'Apr 26, 2026', 'gi': 0},
-          {'id': '4', 'assignment': 'Physics Lab Report', 'course': 'Physics Advanced', 'grade': 78, 'maxGrade': 100, 'feedback': 'Good effort. Work on your error analysis section.', 'status': 'graded',  'date': 'Apr 12, 2026', 'gi': 1},
-          {'id': '5', 'assignment': 'Newton\'s Laws Quiz', 'course': 'Physics Advanced', 'grade': 95, 'maxGrade': 100, 'feedback': 'Excellent understanding!', 'status': 'graded',  'date': 'Apr 20, 2026', 'gi': 1},
-          {'id': '6', 'assignment': 'CS Project Phase 1', 'course': 'Computer Science', 'grade': 90, 'maxGrade': 100, 'feedback': 'Great implementation. Clean code.', 'status': 'graded',  'date': 'Apr 08, 2026', 'gi': 2},
-          {'id': '7', 'assignment': 'CS Project Phase 2', 'course': 'Computer Science', 'grade': null, 'maxGrade': 100, 'feedback': '', 'status': 'pending', 'date': 'Apr 28, 2026', 'gi': 2},
-          {'id': '8', 'assignment': 'Shakespeare Essay',  'course': 'English Literature', 'grade': 85, 'maxGrade': 100, 'feedback': 'Very insightful analysis!', 'status': 'graded',  'date': 'Apr 15, 2026', 'gi': 3},
-        ]);
-        _loading = false;
-      });
+    try {
+      final auth = context.read<AuthProvider>();
+      final assignments = await ApiService.getAssignments(auth.id);
+      
+      if (mounted) {
+        setState(() {
+          _grades.clear();
+          _grades.addAll(assignments);
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading grades: $e')),
+        );
+      }
     }
   }
 

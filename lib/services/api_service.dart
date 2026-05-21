@@ -4,14 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 
 class ApiService {
-  // ═══ BACKEND URL - CHANGE THIS BASED ON YOUR SETUP ═══
-  // Use --dart-define=API_BASE_URL=https://your-backend.onrender.com/api when building.
-  // For Android Emulator: use 'http://10.0.2.2:5000/api'
-  // For Physical Device on same WiFi: use 'http://10.244.68.221:5000/api'
+  // ═══ BACKEND URL - DEPLOYED ON RENDER ═══
+  // Production: https://educonnect-backend-niwi.onrender.com/api
+  // Use --dart-define=API_BASE_URL=https://educonnect-backend-niwi.onrender.com/api when building.
   // For Local Testing (Web/Dev): use 'http://localhost:5000/api'
+  // For Android Emulator: use 'http://10.0.2.2:5000/api'
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.244.68.221:5000/api',
+    defaultValue: 'https://educonnect-backend-niwi.onrender.com/api',
   );
   
   static String? _token;
@@ -244,6 +244,28 @@ class ApiService {
     } catch (e) {
       print('Error fetching courses: $e');
       return [];
+    }
+  }
+
+  // Get teacher dashboard stats (real data)
+  static Future<Map<String, dynamic>> getTeacherStats() async {
+    try {
+      await _loadToken();
+      if (_token == null) return {};
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/courses/stats/teacher'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['stats'] ?? {};
+      }
+      return {};
+    } catch (e) {
+      print('Error fetching teacher stats: $e');
+      return {};
     }
   }
 
@@ -1068,6 +1090,72 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> adminDeleteAnnouncement({
+    required int announcementId,
+  }) async {
+    try {
+      await _loadToken();
+      if (_token == null) return {'success': false};
+
+      final String realId = _announcementIdMap[announcementId] ?? announcementId.toString();
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/admin/announcements/$realId'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Announcement deleted'};
+      }
+      return {'success': false, 'message': 'Failed to delete'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminDeleteQuestion({
+    required String questionId,
+  }) async {
+    try {
+      await _loadToken();
+      if (_token == null) return {'success': false};
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/admin/questions/$questionId'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Question deleted'};
+      }
+      return {'success': false, 'message': 'Failed to delete'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> adminDeleteAnswer({
+    required String questionId,
+    required String answerId,
+  }) async {
+    try {
+      await _loadToken();
+      if (_token == null) return {'success': false};
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/admin/questions/$questionId/answers/$answerId'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Answer deleted'};
+      }
+      return {'success': false, 'message': 'Failed to delete'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   // ═══ CHAT ═══
   
   static Future<List<Map<String, dynamic>>> getContacts() async {
@@ -1134,6 +1222,48 @@ class ApiService {
       return {'success': false};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  // Get assigned teachers for a student (for chat)
+  static Future<List<Map<String, dynamic>>> getAssignedTeachers() async {
+    try {
+      await _loadToken();
+      if (_token == null) return [];
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/chat/assigned-teachers'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching assigned teachers: $e');
+      return [];
+    }
+  }
+
+  // Get assigned students for a teacher (for chat)
+  static Future<List<Map<String, dynamic>>> getAssignedStudents() async {
+    try {
+      await _loadToken();
+      if (_token == null) return [];
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/chat/assigned-students'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching assigned students: $e');
+      return [];
     }
   }
 

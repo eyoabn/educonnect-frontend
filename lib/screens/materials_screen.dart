@@ -7,15 +7,6 @@ import '../services/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
-final _mockMaterials = [
-  StudyMaterial(id: 1, name: 'Lecture 1 - Introduction.pdf', type: 'PDF', size: '2.3 MB', date: 'Apr 20, 2026', category: 'lecture'),
-  StudyMaterial(id: 2, name: 'Assignment 3 - Calculus.docx', type: 'DOC', size: '156 KB', date: 'Apr 24, 2026', category: 'assignment', downloaded: true),
-  StudyMaterial(id: 3, name: 'Chapter 5 Notes.pdf', type: 'PDF', size: '4.1 MB', date: 'Apr 18, 2026', category: 'note'),
-  StudyMaterial(id: 4, name: 'Practice Problems.xlsx', type: 'XLS', size: '89 KB', date: 'Apr 15, 2026', category: 'exercise', downloaded: true),
-  StudyMaterial(id: 5, name: 'Midterm Review.pdf', type: 'PDF', size: '1.8 MB', date: 'Apr 22, 2026', category: 'exam'),
-  StudyMaterial(id: 6, name: 'Lab Report Template.docx', type: 'DOC', size: '234 KB', date: 'Apr 10, 2026', category: 'template'),
-];
-
 class MaterialsScreen extends StatefulWidget {
   final Course course;
   const MaterialsScreen({super.key, required this.course});
@@ -48,25 +39,33 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
   }
 
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final data = await ApiService.getMaterials(widget.course.id);
-      if (mounted) setState(() {
-        _all = data.map((m) => StudyMaterial(
-          id: (m['id'] as num?)?.toInt() ?? 0,
-          name: m['name'] as String? ?? 'Material',
-          type: m['type'] as String? ?? 'FILE',
-          size: m['size'] as String? ?? 'Unknown',
-          date: m['date'] as String? ?? '',
-          category: m['category'] as String? ?? 'general',
-          downloaded: m['downloaded'] as bool? ?? false,
-          version: m['version'] as int? ?? 1,
-        )).toList();
-        _loading = false;
-        _applyFilter();
-      });
-    } catch (_) {
-      if (mounted) setState(() { _all = List.from(_mockMaterials); _loading = false; _applyFilter(); });
+      if (mounted) {
+        setState(() {
+          _all = data.map((m) => StudyMaterial(
+            id: (m['id'] as num?)?.toInt() ?? 0,
+            name: m['name'] as String? ?? 'Material',
+            type: m['type'] as String? ?? 'FILE',
+            size: m['size'] as String? ?? 'Unknown',
+            date: m['date'] as String? ?? '',
+            category: m['category'] as String? ?? 'general',
+            downloaded: m['downloaded'] as bool? ?? false,
+            version: m['version'] as int? ?? 1,
+          )).toList();
+          _loading = false;
+          _applyFilter();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _applyFilter();
+        });
+      }
     }
   }
 
