@@ -221,12 +221,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                         gradient: isAdmin 
                             ? AppGradients.darkBlue 
-                            : (isTeacher ? AppGradients.emerald : AppGradients.violet),
+                            : (isTeacher ? AppGradients.emerald : AppGradients.cyan),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [BoxShadow(
                             color: (isAdmin 
                                 ? Colors.blue 
-                                : (isTeacher ? AppColors.emerald : AppColors.violet)).withOpacity(0.35),
+                                : (isTeacher ? AppColors.emerald : AppColors.cyan)).withOpacity(0.35),
                             blurRadius: 8)],
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [

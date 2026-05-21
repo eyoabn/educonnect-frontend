@@ -1,54 +1,54 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const violet   = Color(0xFF7C3AED);
-  static const fuchsia  = Color(0xFFD946EF);
-  static const orange   = Color(0xFFF97316);
-  static const pink     = Color(0xFFEC4899);
-  static const cyan     = Color(0xFF06B6D4);
-  static const blue     = Color(0xFF2563EB);
-  static const emerald  = Color(0xFF10B981);
-  static const teal     = Color(0xFF0D9488);
-  static const purple   = Color(0xFF9333EA);
-  static const rose     = Color(0xFFF43F5E);
-  static const background   = Color(0xFFF8F7FF);
+  static const violet   = Color(0xFF1E40AF); // Blue
+  static const fuchsia  = Color(0xFF3B82F6); // Light Blue
+  static const orange   = Color(0xFF0F172A); // Slate
+  static const pink     = Color(0xFF1E1B4B); // Dark Indigo
+  static const cyan     = Color(0xFF0EA5E9); // Sky Blue
+  static const blue     = Color(0xFF2563EB); // Standard Blue
+  static const emerald  = Color(0xFF0284C7); // Dark Sky Blue
+  static const teal     = Color(0xFF312E81); // Indigo
+  static const purple   = Color(0xFF111827); // Dark Gray
+  static const rose     = Color(0xFF374151); // Gray
+  static const background   = Color(0xFFF8F9FA); // Very light grey/blue
   static const textPrimary  = Color(0xFF1F2937);
   static const textSecondary= Color(0xFF6B7280);
-  static const border       = Color(0xFFEDE9FE);
+  static const border       = Color(0xFFE2E8F0); // Slate border
 }
 
 class AppGradients {
   static const primary = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFF7C3AED), Color(0xFFD946EF), Color(0xFFF97316)],
+    colors: [Color(0xFF1E40AF), Color(0xFF2563EB), Color(0xFF1E1B4B)],
   );
   static const violet = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+    colors: [Color(0xFF1E40AF), Color(0xFF1E1B4B)],
   );
   static const orange = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFFF97316), Color(0xFFEC4899)],
+    colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
   );
   static const cyan = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFF06B6D4), Color(0xFF2563EB)],
+    colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
   );
   static const emerald = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFF10B981), Color(0xFF0D9488)],
+    colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
   );
   static const purple = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFFA855F7), Color(0xFF9333EA)],
+    colors: [Color(0xFF312E81), Color(0xFF4338CA)],
   );
   static const red = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFFF87171), Color(0xFFF43F5E)],
+    colors: [Color(0xFF111827), Color(0xFF374151)],
   );
   static const fuchsia = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    colors: [Color(0xFFE879F9), Color(0xFFD946EF)],
+    colors: [Color(0xFF1D4ED8), Color(0xFF2563EB)],
   );
   static const darkBlue = LinearGradient(
     begin: Alignment.topLeft, end: Alignment.bottomRight,
