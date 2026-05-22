@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import 'chat_screen.dart';
 
 class StudentListScreen extends StatefulWidget {
   final Course? course;
@@ -176,9 +177,21 @@ class _StudentListScreenState extends State<StudentListScreen> {
             child: Row(children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () { Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Opening chat...'))); },
+                  onTap: () { 
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationScreen(
+                      contact: ChatContact(
+                        id: student['id'].toString(),
+                        name: student['name'],
+                        role: 'Student',
+                        avatar: _initials(student['name']),
+                        online: true,
+                        unread: 0,
+                        lastMessage: '',
+                        gradientIndex: (student['gi'] as int) % 4,
+                      ),
+                    )));
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(gradient: AppGradients.violet, borderRadius: BorderRadius.circular(16),

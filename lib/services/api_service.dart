@@ -19,9 +19,15 @@ class ApiService {
 
   // ═══ TOKEN MANAGEMENT ═══
   static Future<void> _loadToken() async {
-    if (_token != null) return;
+    if (_token != null && _currentUser != null) return;
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString('auth_token');
+    final userStr = prefs.getString('current_user');
+    if (userStr != null) {
+      try {
+        _currentUser = jsonDecode(userStr);
+      } catch (_) {}
+    }
   }
 
   static Future<void> _setToken(String token) async {
@@ -44,6 +50,8 @@ class ApiService {
   }
 
   static Map<String, dynamic>? get currentUser => _currentUser;
+  
+  static String get currentUserId => (_currentUser?['_id'] ?? _currentUser?['id'])?.toString() ?? '';
 
   // ═══ AUTHENTICATION ═══
   
@@ -231,6 +239,7 @@ class ApiService {
             'id': course['_id'] ?? '',
             'name': course['name'] ?? 'Course',
             'teacher': teacher is Map ? teacher['name'] ?? 'Unknown' : teacher.toString(),
+            'teacherId': teacher is Map ? (teacher['_id']?.toString() ?? '') : '',
             'gradientIndex': 0,
             'unread': 0,
             'progress': (course['progress'] ?? 0).toInt(),
@@ -1159,6 +1168,10 @@ class ApiService {
   }
 
   // ═══ CHAT ═══
+
+  static String _getConversationId(String u1, String u2) {
+    return u1.compareTo(u2) < 0 ? '${u1}_$u2' : '${u2}_$u1';
+  }
   
   static Future<List<Map<String, dynamic>>> getContacts() async {
     try {
@@ -1166,23 +1179,73 @@ class ApiService {
       if (_token == null) return [];
 
       final response = await http.get(
-        Uri.parse('$baseUrl/chat/contacts'),
+        Uri.parse('$baseUrl/chat/conversations'),
         headers: {'Authorization': 'Bearer $_token'},
       ).timeout(const Duration(seconds: 10));
 
+      final Map<String, Map<String, dynamic>> contactsMap = {};
+
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final List<dynamic> conversations = jsonDecode(response.body);
+
+        for (var msg in conversations) {
+          final sender = msg['senderId'];
+          final receiver = msg['receiverId'];
+          if (sender == null || receiver == null) continue;
+
+          final isSender = sender['_id'] == currentUserId;
+          final otherUser = isSender ? receiver : sender;
+          final otherId = otherUser['_id']?.toString() ?? '';
+
+          if (otherId.isEmpty || contactsMap.containsKey(otherId)) continue;
+
+          String name = otherUser['name'] ?? 'Unknown';
+          String initials = name.split(' ').map((w) => w.isEmpty ? '' : w[0]).take(2).join().toUpperCase();
+
+          contactsMap[otherId] = {
+            'id': otherId,
+            'name': name,
+            'role': otherUser['role'] ?? 'User',
+            'avatar': initials,
+            'online': true,
+            'unread': msg['read'] == false && !isSender ? 1 : 0,
+            'lastMessage': msg['text'] ?? '',
+            'gradientIndex': otherId.hashCode.abs() % 4,
+          };
+        }
       }
-      return [];
+
+      // Add teachers from courses for students
+      final courses = await getCourses();
+      for (var c in courses) {
+        final tId = c['teacherId'] as String? ?? '';
+        if (tId.isNotEmpty && tId != currentUserId && !contactsMap.containsKey(tId)) {
+          final tName = c['teacher'] as String? ?? 'Teacher';
+          contactsMap[tId] = {
+            'id': tId,
+            'name': tName,
+            'role': 'Teacher',
+            'avatar': tName.split(' ').map((w) => w.isEmpty ? '' : w[0]).take(2).join().toUpperCase(),
+            'online': false,
+            'unread': 0,
+            'lastMessage': 'Start a conversation',
+            'gradientIndex': tId.hashCode.abs() % 4,
+          };
+        }
+      }
+
+      return contactsMap.values.toList();
     } catch (e) {
       return [];
     }
   }
   
-  static Future<List<Map<String, dynamic>>> getMessages(String conversationId) async {
+  static Future<List<Map<String, dynamic>>> getMessages(String receiverId) async {
     try {
       await _loadToken();
       if (_token == null) return [];
+
+      final conversationId = _getConversationId(currentUserId, receiverId);
 
       final response = await http.get(
         Uri.parse('$baseUrl/chat/conversation/$conversationId'),
@@ -1190,7 +1253,17 @@ class ApiService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        final List data = jsonDecode(response.body);
+        return data.reversed.map((m) {
+          final senderId = m['senderId'] != null ? m['senderId']['_id']?.toString() : null;
+          return {
+            'id': m['_id']?.hashCode.abs() ?? 0,
+            'sender': m['senderId'] != null ? m['senderId']['name'] ?? 'Unknown' : 'Unknown',
+            'content': m['text'] ?? '',
+            'time': 'Just now',
+            'isSelf': senderId == currentUserId,
+          };
+        }).toList();
       }
       return [];
     } catch (e) {
@@ -1199,12 +1272,14 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> sendMessage({
-    required int receiverId,
+    required String receiverId,
     required String text,
   }) async {
     try {
       await _loadToken();
       if (_token == null) return {'success': false};
+
+      final conversationId = _getConversationId(currentUserId, receiverId);
 
       final response = await http.post(
         Uri.parse('$baseUrl/chat/send'),
@@ -1214,6 +1289,7 @@ class ApiService {
         },
         body: jsonEncode({
           'receiverId': receiverId,
+          'conversationId': conversationId,
           'text': text,
         }),
       ).timeout(const Duration(seconds: 10));
@@ -1221,9 +1297,9 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'message': jsonDecode(response.body)};
       }
-      return {'success': false};
+      throw Exception('Failed to send message: ${response.body}');
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      throw Exception('Error sending message: $e');
     }
   }
 

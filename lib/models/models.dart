@@ -93,7 +93,7 @@ class StudyMaterial {
 }
 
 class ChatContact {
-  final int id;
+  final String id;
   final String name;
   final String role;
   final String avatar;
@@ -109,7 +109,7 @@ class ChatContact {
   });
 
   factory ChatContact.fromJson(Map<String, dynamic> j) => ChatContact(
-    id: j['id'], name: j['name'], role: j['role'],
+    id: j['id']?.toString() ?? '', name: j['name'], role: j['role'],
     avatar: j['avatar'], online: j['online'] ?? false,
     unread: j['unread'] ?? 0, lastMessage: j['lastMessage'] ?? '',
     gradientIndex: j['gradientIndex'] ?? 0,

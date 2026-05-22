@@ -7,32 +7,32 @@ import '../widgets/common_widgets.dart';
 
 // ── Mock data ──────────────────────────────────────────────────────────────
 final _mockContacts = [
-  ChatContact(id: 1, name: 'Dr. Sarah Johnson', role: 'Mathematics Teacher', avatar: 'SJ', online: true, unread: 2, lastMessage: 'See you tomorrow!', gradientIndex: 0),
-  ChatContact(id: 2, name: 'Prof. Michael Chen', role: 'Physics Teacher', avatar: 'MC', online: true, unread: 0, lastMessage: 'Great work on the lab report', gradientIndex: 1),
-  ChatContact(id: 3, name: 'Dr. Emily Parker', role: 'CS Teacher', avatar: 'EP', online: false, unread: 1, lastMessage: 'Assignment deadline extended', gradientIndex: 2),
-  ChatContact(id: 4, name: 'Ms. Rachel Adams', role: 'English Teacher', avatar: 'RA', online: true, unread: 0, lastMessage: 'Thanks for your essay', gradientIndex: 3),
-  ChatContact(id: 5, name: 'Study Group A', role: '5 members', avatar: 'SG', online: true, unread: 5, lastMessage: 'Anyone free for study session?', gradientIndex: 2),
+  ChatContact(id: '1', name: 'Dr. Sarah Johnson', role: 'Mathematics Teacher', avatar: 'SJ', online: true, unread: 2, lastMessage: 'See you tomorrow!', gradientIndex: 0),
+  ChatContact(id: '2', name: 'Prof. Michael Chen', role: 'Physics Teacher', avatar: 'MC', online: true, unread: 0, lastMessage: 'Great work on the lab report', gradientIndex: 1),
+  ChatContact(id: '3', name: 'Dr. Emily Parker', role: 'CS Teacher', avatar: 'EP', online: false, unread: 1, lastMessage: 'Assignment deadline extended', gradientIndex: 2),
+  ChatContact(id: '4', name: 'Ms. Rachel Adams', role: 'English Teacher', avatar: 'RA', online: true, unread: 0, lastMessage: 'Thanks for your essay', gradientIndex: 3),
+  ChatContact(id: '5', name: 'Study Group A', role: '5 members', avatar: 'SG', online: true, unread: 5, lastMessage: 'Anyone free for study session?', gradientIndex: 2),
 ];
 
-final _mockMessages = <int, List<ChatMessage>>{
-  1: [
+final _mockMessages = <String, List<ChatMessage>>{
+  '1': [
     ChatMessage(id: 1, sender: 'Dr. Sarah Johnson', content: "Good morning! Don't forget about tomorrow's quiz.", time: '09:30 AM', isSelf: false),
     ChatMessage(id: 2, sender: 'You', content: 'Will the quiz cover chapter 5?', time: '09:35 AM', isSelf: true),
     ChatMessage(id: 3, sender: 'Dr. Sarah Johnson', content: 'Yes, chapters 4 and 5 will be included. Focus on integration formulas.', time: '09:40 AM', isSelf: false),
     ChatMessage(id: 4, sender: 'You', content: 'Thank you for clarifying!', time: '09:42 AM', isSelf: true),
   ],
-  2: [
+  '2': [
     ChatMessage(id: 1, sender: 'Prof. Michael Chen', content: 'Great work on the lab report!', time: '10:15 AM', isSelf: false),
     ChatMessage(id: 2, sender: 'You', content: 'Thank you professor! I really enjoyed the experiment.', time: '10:20 AM', isSelf: true),
   ],
-  3: [
+  '3': [
     ChatMessage(id: 1, sender: 'Dr. Emily Parker', content: 'Assignment deadline has been extended to next Friday.', time: 'Yesterday', isSelf: false),
     ChatMessage(id: 2, sender: 'You', content: "That's great news, thank you!", time: 'Yesterday', isSelf: true),
   ],
-  4: [
+  '4': [
     ChatMessage(id: 1, sender: 'Ms. Rachel Adams', content: 'Thanks for your essay on Shakespeare. Very insightful!', time: '2 days ago', isSelf: false),
   ],
-  5: [
+  '5': [
     ChatMessage(id: 1, sender: 'John', content: 'Anyone free for a study session this weekend?', time: '11:00 AM', isSelf: false),
     ChatMessage(id: 2, sender: 'You', content: "I'm available Saturday afternoon", time: '11:05 AM', isSelf: true),
     ChatMessage(id: 3, sender: 'Sarah', content: "Me too! Let's meet at the library", time: '11:10 AM', isSelf: false),
@@ -67,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final data = await ApiService.getContacts();
       if (mounted) setState(() { 
         _contacts = data.map((c) => ChatContact(
-          id: (c['id'] as num?)?.toInt() ?? 0,
+          id: c['id']?.toString() ?? '',
           name: c['name'] as String? ?? 'Unknown',
           role: c['role'] as String? ?? '',
           avatar: c['avatar'] as String? ?? '?',
@@ -93,12 +93,12 @@ class _ChatScreenState extends State<ChatScreen> {
   void _openConversation(ChatContact contact) {
     // Clear unread badge
     setState(() { contact.unread = 0; });
-    Navigator.push(context, MaterialPageRoute(builder: (_) => _ConversationScreen(contact: contact)));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationScreen(contact: contact)));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_selected != null) return _ConversationScreen(contact: _selected!);
+    if (_selected != null) return ConversationScreen(contact: _selected!);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -192,14 +192,14 @@ class _ContactTile extends StatelessWidget {
 }
 
 // ── Conversation Screen ───────────────────────────────────────────────────────
-class _ConversationScreen extends StatefulWidget {
+class ConversationScreen extends StatefulWidget {
   final ChatContact contact;
-  const _ConversationScreen({required this.contact});
+  const ConversationScreen({required this.contact});
   @override
-  State<_ConversationScreen> createState() => _ConversationScreenState();
+  State<ConversationScreen> createState() => _ConversationScreenState();
 }
 
-class _ConversationScreenState extends State<_ConversationScreen> {
+class _ConversationScreenState extends State<ConversationScreen> {
   List<ChatMessage> _messages = [];
   bool _loading = true;
   bool _sending = false;
@@ -217,7 +217,7 @@ class _ConversationScreenState extends State<_ConversationScreen> {
 
   Future<void> _loadMessages() async {
     try {
-      final msgs = await ApiService.getMessages(widget.contact.id.toString());
+      final msgs = await ApiService.getMessages(widget.contact.id);
       if (mounted) setState(() { _messages = msgs.map((m) => ChatMessage(
         id: (m['id'] as num?)?.toInt() ?? 0,
         sender: m['sender'] as String? ?? 'Unknown',
