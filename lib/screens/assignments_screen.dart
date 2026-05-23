@@ -201,9 +201,15 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                   onTap: () async {
                     final url = a['attachmentUrl'] as String;
                     if (url.startsWith('http')) {
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
+                      try {
+                        final uri = Uri.parse(url);
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Could not open file: $e')),
+                          );
+                        }
                       }
                     }
                   },
@@ -233,10 +239,62 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                 const SizedBox(height: 18),
               ],
 
-              // Submission content (if pending)
-              if (!auth.isTeacher && a['status'] == 'pending') ...[
-                const Text('Upload Submission',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+              // Submission content (if not graded and not teacher)
+              if (!auth.isTeacher && a['status'] != 'graded') ...[
+                // Show existing submission if any
+                if (a['submissionContent'] != null && (a['submissionContent'] as String).isNotEmpty) ...[
+                  const Text('Your Current Submission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      final url = a['submissionContent'] as String;
+                      if (url.startsWith('http')) {
+                        try {
+                          final uri = Uri.parse(url);
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Could not open file: $e')),
+                            );
+                          }
+                        }
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.border)),
+                      child: Row(children: [
+                        const Icon(Icons.insert_drive_file_rounded, color: AppColors.violet, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            (a['submissionContent'] as String).startsWith('http') ? 'View Uploaded File' : (a['submissionContent'] as String),
+                            style: TextStyle(
+                              fontSize: 13, 
+                              color: (a['submissionContent'] as String).startsWith('http') ? AppColors.violet : AppColors.textPrimary, 
+                              fontWeight: FontWeight.bold,
+                              decoration: (a['submissionContent'] as String).startsWith('http') ? TextDecoration.underline : TextDecoration.none,
+                            )
+                          ),
+                        ),
+                        if ((a['submissionContent'] as String).startsWith('http'))
+                          const Icon(Icons.open_in_new_rounded, color: AppColors.violet, size: 16),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
+                // Upload/Update block
+                Text(
+                  a['submissionContent'] != null && (a['submissionContent'] as String).isNotEmpty 
+                      ? 'Upload New Submission' 
+                      : 'Upload Submission',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)
+                ),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () async {
@@ -277,17 +335,23 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                 const SizedBox(height: 16),
               ],
               
-              // Show submitted content if available
-              if (!auth.isTeacher && a['status'] != 'pending' && a['submissionContent'] != null && (a['submissionContent'] as String).isNotEmpty) ...[
+              // Show submitted content if graded
+              if (!auth.isTeacher && a['status'] == 'graded' && a['submissionContent'] != null && (a['submissionContent'] as String).isNotEmpty) ...[
                 const Text('Your Submission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () async {
                     final url = a['submissionContent'] as String;
                     if (url.startsWith('http')) {
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
+                      try {
+                        final uri = Uri.parse(url);
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Could not open file: $e')),
+                          );
+                        }
                       }
                     }
                   },
@@ -321,11 +385,13 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
           )),
 
           // Submit button
-          if (!auth.isTeacher && a['status'] == 'pending')
+          if (!auth.isTeacher && a['status'] != 'graded')
             Padding(
               padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 20),
               child: GradientButton(
-                label: submitting ? 'Submitting...' : 'Submit Assignment',
+                label: submitting 
+                    ? 'Submitting...' 
+                    : (a['submissionContent'] != null && (a['submissionContent'] as String).isNotEmpty ? 'Update Submission' : 'Submit Assignment'),
                 gradient: AppGradients.violet,
                 isLoading: submitting,
                 icon: Icons.upload_rounded,
@@ -358,7 +424,8 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submission failed'), backgroundColor: Colors.red));
                       }
                     } else {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File upload failed'), backgroundColor: Colors.red));
+                      final errMsg = uploadRes['message'] ?? 'File upload failed';
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg), backgroundColor: Colors.red));
                     }
                   } catch (e) {
                     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
@@ -489,6 +556,11 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                     final uploadRes = await ApiService.uploadAssignmentFile(pickedAttachment!);
                     if (uploadRes['success'] == true && uploadRes['data'] != null && uploadRes['data']['url'] != null) {
                       attachmentUrl = uploadRes['data']['url'] as String;
+                    } else {
+                      final errMsg = uploadRes['message'] ?? 'Failed to upload attachment';
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg), backgroundColor: Colors.red));
+                      setS(() => loading = false);
+                      return;
                     }
                   }
                   final res = await ApiService.createAssignment(widget.course?.id ?? '', {

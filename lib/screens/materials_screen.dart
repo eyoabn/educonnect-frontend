@@ -98,11 +98,23 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     try {
       final response = await ApiService.getMaterialDownloadUrl(widget.course.id, material.id);
       final url = response['url'] as String? ?? '';
-      if (url.isNotEmpty && await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        setState(() => material.downloaded = true);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Download started!'), backgroundColor: Colors.green));
+      if (url.isNotEmpty) {
+        try {
+          final uri = Uri.parse(url);
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          setState(() => material.downloaded = true);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Download started!'), backgroundColor: Colors.green),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not open file: $e'), backgroundColor: Colors.red),
+            );
+          }
+        }
       }
     } catch (_) {
       // Demo fallback
@@ -461,7 +473,8 @@ class _UploadSheetState extends State<_UploadSheet> {
       if (uploadRes['success'] == true && uploadRes['data'] != null && uploadRes['data']['url'] != null) {
         uploadedUrl = uploadRes['data']['url'] as String;
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File upload failed to cloud storage')));
+        final errMsg = uploadRes['message'] ?? 'File upload failed to cloud storage';
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errMsg)));
         setState(() => _uploading = false);
         return;
       }

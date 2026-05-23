@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -966,10 +967,27 @@ class ApiService {
     }
   }
 
+  static MediaType _getMediaType(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf': return MediaType('application', 'pdf');
+      case 'doc': return MediaType('application', 'msword');
+      case 'docx': return MediaType('application', 'vnd.openxmlformats-officedocument.wordprocessingml.document');
+      case 'xls': return MediaType('application', 'vnd.ms-excel');
+      case 'xlsx': return MediaType('application', 'vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      case 'png': return MediaType('image', 'png');
+      case 'jpg':
+      case 'jpeg': return MediaType('image', 'jpeg');
+      case 'txt': return MediaType('text', 'plain');
+      case 'zip': return MediaType('application', 'zip');
+      default: return MediaType('application', 'octet-stream');
+    }
+  }
+
   static Future<Map<String, dynamic>> uploadAssignmentFile(var file) async {
     try {
       await _loadToken();
-      if (_token == null) return {'success': false};
+      if (_token == null) return {'success': false, 'message': 'Authentication required'};
 
       final request = http.MultipartRequest(
         'POST',
@@ -977,19 +995,24 @@ class ApiService {
       );
       request.headers['Authorization'] = 'Bearer $_token';
 
+      final mediaType = _getMediaType(file.name);
+
       if (file.bytes != null) {
         request.files.add(http.MultipartFile.fromBytes(
           'file',
           file.bytes!,
           filename: file.name,
+          contentType: mediaType,
         ));
       } else if (file.path != null) {
         request.files.add(await http.MultipartFile.fromPath(
           'file',
           file.path!,
+          filename: file.name,
+          contentType: mediaType,
         ));
       } else {
-        return {'success': false, 'message': 'Invalid file'};
+        return {'success': false, 'message': 'Invalid file selection'};
       }
 
       final streamedResponse = await request.send();
@@ -998,7 +1021,17 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(response.body)};
       }
-      return {'success': false, 'message': 'Upload failed'};
+      
+      // Attempt to extract error message from backend
+      String errorMsg = 'Upload failed: ${response.statusCode}';
+      try {
+        final parsed = jsonDecode(response.body);
+        if (parsed != null && parsed['message'] != null) {
+          errorMsg = parsed['message'].toString();
+        }
+      } catch (_) {}
+      
+      return {'success': false, 'message': errorMsg};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
