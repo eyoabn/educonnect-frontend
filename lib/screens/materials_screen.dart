@@ -99,21 +99,12 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
       final response = await ApiService.getMaterialDownloadUrl(widget.course.id, material.id);
       final url = response['url'] as String? ?? '';
       if (url.isNotEmpty) {
-        try {
-          final uri = Uri.parse(url);
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          setState(() => material.downloaded = true);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Download started!'), backgroundColor: Colors.green),
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Could not open file: $e'), backgroundColor: Colors.red),
-            );
-          }
+        await _safeLaunchUrl(url);
+        setState(() => material.downloaded = true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Download started!'), backgroundColor: Colors.green),
+          );
         }
       }
     } catch (_) {
@@ -123,6 +114,24 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
         setState(() => material.downloaded = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Downloaded: ${material.name}'), backgroundColor: Colors.green));
+      }
+    }
+  }
+
+  Future<void> _safeLaunchUrl(String urlString) async {
+    if (urlString.isEmpty) return;
+    try {
+      final uri = Uri.parse(urlString);
+      try {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open file: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }

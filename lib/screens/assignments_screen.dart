@@ -56,6 +56,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
               'status': 'pending',
               'gi': s['gi'] as int? ?? s['gradientIndex'] as int? ?? 0,
               'description': s['description'] as String? ?? '',
+              'attachmentUrl': s['attachmentUrl'] as String? ?? '',
             };
           }
         }
@@ -100,6 +101,24 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
       case 'submitted': return Icons.upload_file_rounded;
       case 'graded':    return Icons.check_circle_rounded;
       default:          return Icons.pending_rounded;
+    }
+  }
+
+  Future<void> _safeLaunchUrl(String urlString) async {
+    if (urlString.isEmpty) return;
+    try {
+      final uri = Uri.parse(urlString);
+      try {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open file: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -201,16 +220,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                   onTap: () async {
                     final url = a['attachmentUrl'] as String;
                     if (url.startsWith('http')) {
-                      try {
-                        final uri = Uri.parse(url);
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Could not open file: $e')),
-                          );
-                        }
-                      }
+                      await _safeLaunchUrl(url);
                     }
                   },
                   child: Container(
@@ -249,16 +259,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                     onTap: () async {
                       final url = a['submissionContent'] as String;
                       if (url.startsWith('http')) {
-                        try {
-                          final uri = Uri.parse(url);
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Could not open file: $e')),
-                            );
-                          }
-                        }
+                        await _safeLaunchUrl(url);
                       }
                     },
                     child: Container(
@@ -343,16 +344,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                   onTap: () async {
                     final url = a['submissionContent'] as String;
                     if (url.startsWith('http')) {
-                      try {
-                        final uri = Uri.parse(url);
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Could not open file: $e')),
-                          );
-                        }
-                      }
+                      await _safeLaunchUrl(url);
                     }
                   },
                   child: Container(

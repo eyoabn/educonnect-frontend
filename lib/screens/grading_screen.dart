@@ -80,6 +80,24 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
     _showGradingSheet();
   }
 
+  Future<void> _safeLaunchUrl(String urlString) async {
+    if (urlString.isEmpty) return;
+    try {
+      final uri = Uri.parse(urlString);
+      try {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open file: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   void _showGradingSheet() {
     showModalBottomSheet(
       context: context,
@@ -127,10 +145,7 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
                 onTap: () async {
                   final url = _selected!['submissionContent'] as String;
                   if (url.startsWith('http')) {
-                    final uri = Uri.parse(url);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
+                    await _safeLaunchUrl(url);
                   }
                 },
                 child: Container(

@@ -1040,6 +1040,7 @@ class ApiService {
   // ═══ MATERIALS ═══
   
   static final Map<int, String> _materialIdMap = {};
+  static final Map<int, String> _materialUrlMap = {};
 
   static Future<List<Map<String, dynamic>>> getMaterials(String courseId) async {
     try {
@@ -1069,6 +1070,7 @@ class ApiService {
           final String realId = m['_id']?.toString() ?? '';
           final int mockId = realId.hashCode.abs();
           _materialIdMap[mockId] = realId;
+          _materialUrlMap[mockId] = m['fileUrl'] as String? ?? m['url'] as String? ?? '';
 
           return {
             'id': mockId,
@@ -1129,25 +1131,11 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getMaterialDownloadUrl(String courseId, int materialId) async {
-    try {
-      await _loadToken();
-      if (_token == null) return {'success': false, 'url': ''};
-
-      final String realId = _materialIdMap[materialId] ?? materialId.toString();
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/materials/$realId/download'),
-        headers: {'Authorization': 'Bearer $_token'},
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return {'success': true, 'url': data['url'] ?? ''};
-      }
-      return {'success': false, 'url': ''};
-    } catch (e) {
-      return {'success': false, 'url': ''};
+    final String url = _materialUrlMap[materialId] ?? '';
+    if (url.isNotEmpty) {
+      return {'success': true, 'url': url};
     }
+    return {'success': false, 'url': ''};
   }
 
   static Future<Map<String, dynamic>> deleteMaterial(String courseId, int materialId) async {
