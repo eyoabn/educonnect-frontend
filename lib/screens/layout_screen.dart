@@ -98,6 +98,7 @@ class _LayoutScreenState extends State<LayoutScreen> {
         items: items,
         currentIndex: safeIndex,
         isAdmin: auth.isAdmin,
+        isTeacher: auth.isTeacher,
         onTap: (i) => setState(() => _currentIndex = i),
       ),
     );
@@ -110,21 +111,43 @@ class _BottomNav extends StatelessWidget {
   final List<_NavItem> items;
   final int currentIndex;
   final bool isAdmin;
+  final bool isTeacher;
   final ValueChanged<int> onTap;
 
   const _BottomNav({
     required this.items,
     required this.currentIndex,
     required this.isAdmin,
+    this.isTeacher = false,
     required this.onTap,
   });
 
   // Admin uses a distinct gradient to make it visually clear
-  LinearGradient get _activeGradient =>
-      isAdmin ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E40AF), Color(0xFF1E1B4B)]) : AppGradients.violet;
+  LinearGradient get _activeGradient {
+    if (isAdmin) {
+      return const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E40AF), Color(0xFF1E1B4B)]);
+    }
+    if (isTeacher) {
+      if (currentIndex == 0) return AppGradients.violet;
+      if (currentIndex == 1) return AppGradients.emerald;
+      if (currentIndex == 2) return AppGradients.fuchsia;
+      if (currentIndex == 3) return AppGradients.violet;
+      return AppGradients.violet;
+    }
+    return AppGradients.violet;
+  }
 
-  Color get _activeTextColor =>
-      isAdmin ? AppColors.blue : AppColors.violet;
+  Color get _activeTextColor {
+    if (isAdmin) return AppColors.blue;
+    if (isTeacher) {
+      if (currentIndex == 0) return AppColors.violet;
+      if (currentIndex == 1) return AppColors.emerald;
+      if (currentIndex == 2) return AppColors.fuchsia;
+      if (currentIndex == 3) return AppColors.violet;
+      return AppColors.violet;
+    }
+    return AppColors.violet;
+  }
 
   @override
   Widget build(BuildContext context) => Container(

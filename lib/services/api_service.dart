@@ -764,6 +764,10 @@ class ApiService {
           final studentName = g['studentId'] != null && g['studentId'] is Map 
               ? (g['studentId']['name'] as String? ?? 'Unknown Student')
               : 'Student';
+              
+          final rawStudentId = g['studentId'] != null && g['studentId'] is Map 
+              ? (g['studentId']['_id']?.toString() ?? g['studentId']['id']?.toString() ?? '')
+              : (g['studentId']?.toString() ?? '');
 
           DateTime? dateParsed;
           if (g['submittedDate'] != null) {
@@ -778,6 +782,7 @@ class ApiService {
           return {
             'id': mockId.toString(),
             'student': studentName,
+            'studentId': rawStudentId,
             'assignment': g['assignmentName'] as String? ?? 'Assignment',
             'course': g['course']?.toString() ?? '',
             'time': formattedDate,

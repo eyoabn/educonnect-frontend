@@ -37,16 +37,39 @@ class _StudentListScreenState extends State<StudentListScreen> {
       final courseData = await ApiService.getCourse(widget.course!.id);
       final rawStudents = List<dynamic>.from(courseData['studentsList'] ?? []);
       
+      final submissions = await ApiService.getSubmissions(widget.course!.id);
+      
       final mapped = rawStudents.asMap().entries.map((entry) {
         final i = entry.key;
         final s = entry.value;
+        final studentId = s['_id']?.toString() ?? s['id']?.toString() ?? i.toString();
+        
+        final studentSubmissions = submissions.where((sub) => sub['studentId'] == studentId).toList();
+        
+        int totalGrade = 0;
+        int gradedCount = 0;
+        int submittedCount = 0;
+        int totalAssigned = studentSubmissions.length;
+        
+        for (var sub in studentSubmissions) {
+          if (sub['status'] == 'graded' && sub['grade'] != null) {
+            totalGrade += sub['grade'] as int;
+            gradedCount++;
+            submittedCount++;
+          } else if (sub['status'] == 'submitted') {
+            submittedCount++;
+          }
+        }
+        
+        int avg = gradedCount > 0 ? (totalGrade / gradedCount).round() : 0;
+        
         return {
-          'id': s['_id']?.toString() ?? i.toString(),
+          'id': studentId,
           'name': s['name'] ?? 'Unknown',
           'email': s['email'] ?? '',
-          'avg': 75 + (i % 20), // Mock data for now since backend doesn't provide it
-          'submitted': 8,
-          'total': 8,
+          'avg': avg,
+          'submitted': submittedCount,
+          'total': totalAssigned > 0 ? totalAssigned : 1, // Avoid divide by zero visual
           'lastActive': '1 hour ago',
           'gi': i % 4,
         };
