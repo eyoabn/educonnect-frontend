@@ -738,6 +738,7 @@ class ApiService {
       if (_token == null) return {'success': false};
 
       final String realId = _announcementIdMap[announcementId] ?? announcementId.toString();
+      print('DEBUG: updateAnnouncement called with mockId $announcementId, resolved to realId $realId');
 
       final response = await http.put(
         Uri.parse('$baseUrl/announcements/$realId'),
@@ -753,10 +754,13 @@ class ApiService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
+        print('DEBUG: updateAnnouncement success');
         return {'success': true, 'announcement': jsonDecode(response.body)};
       }
-      return {'success': false, 'message': 'Failed to update'};
+      print('DEBUG: updateAnnouncement failed with status ${response.statusCode}: ${response.body}');
+      return {'success': false, 'message': 'Failed to update: ${response.statusCode}'};
     } catch (e) {
+      print('DEBUG: updateAnnouncement error $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
@@ -769,6 +773,7 @@ class ApiService {
       if (_token == null) return {'success': false};
 
       final String realId = _announcementIdMap[announcementId] ?? announcementId.toString();
+      print('DEBUG: deleteAnnouncement called with mockId $announcementId, resolved to realId $realId');
 
       final response = await http.delete(
         Uri.parse('$baseUrl/announcements/$realId'),
@@ -776,10 +781,13 @@ class ApiService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
+        print('DEBUG: deleteAnnouncement success');
         return {'success': true, 'message': 'Announcement deleted'};
       }
-      return {'success': false, 'message': 'Failed to delete'};
+      print('DEBUG: deleteAnnouncement failed with status ${response.statusCode}: ${response.body}');
+      return {'success': false, 'message': 'Failed to delete: ${response.statusCode}'};
     } catch (e) {
+      print('DEBUG: deleteAnnouncement error $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
