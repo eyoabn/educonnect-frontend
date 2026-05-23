@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../models/models.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class GradingScreen extends StatefulWidget {
   final Course? course;
@@ -122,19 +123,39 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
             if (_selected!['submissionContent'] != null && (_selected!['submissionContent'] as String).isNotEmpty) ...[
               const Text('Submission Content', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border)),
-                child: Row(children: [
-                  const Icon(Icons.insert_drive_file_rounded, color: AppColors.violet, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(_selected!['submissionContent'] as String,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                  ),
-                ]),
+              GestureDetector(
+                onTap: () async {
+                  final url = _selected!['submissionContent'] as String;
+                  if (url.startsWith('http')) {
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border)),
+                  child: Row(children: [
+                    const Icon(Icons.insert_drive_file_rounded, color: AppColors.violet, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        (_selected!['submissionContent'] as String).startsWith('http') ? 'View Uploaded File' : (_selected!['submissionContent'] as String),
+                        style: TextStyle(
+                          fontSize: 13, 
+                          color: (_selected!['submissionContent'] as String).startsWith('http') ? AppColors.violet : AppColors.textPrimary, 
+                          fontWeight: FontWeight.bold,
+                          decoration: (_selected!['submissionContent'] as String).startsWith('http') ? TextDecoration.underline : TextDecoration.none,
+                        )
+                      ),
+                    ),
+                    if ((_selected!['submissionContent'] as String).startsWith('http'))
+                      const Icon(Icons.open_in_new_rounded, color: AppColors.violet, size: 16),
+                  ]),
+                ),
               ),
               const SizedBox(height: 24),
             ],

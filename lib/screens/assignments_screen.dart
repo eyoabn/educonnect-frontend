@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../models/models.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 class AssignmentsScreen extends StatefulWidget {
   final Course? course;
   const AssignmentsScreen({super.key, this.course});
@@ -191,6 +193,46 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                 const SizedBox(height: 18),
               ],
 
+              // Teacher attachment (if present)
+              if (a['attachmentUrl'] != null && (a['attachmentUrl'] as String).isNotEmpty) ...[
+                const Text('Teacher Attachment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final url = a['attachmentUrl'] as String;
+                    if (url.startsWith('http')) {
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.cyan)),
+                    child: Row(children: [
+                      const Icon(Icons.download_rounded, color: AppColors.cyan, size: 24),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Download Assignment File',
+                          style: TextStyle(
+                            fontSize: 13, 
+                            color: AppColors.cyan, 
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          )
+                        ),
+                      ),
+                      const Icon(Icons.open_in_new_rounded, color: AppColors.cyan, size: 16),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ],
+
               // Submission content (if pending)
               if (!auth.isTeacher && a['status'] == 'pending') ...[
                 const Text('Upload Submission',
@@ -239,19 +281,39 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
               if (!auth.isTeacher && a['status'] != 'pending' && a['submissionContent'] != null && (a['submissionContent'] as String).isNotEmpty) ...[
                 const Text('Your Submission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border)),
-                  child: Row(children: [
-                    const Icon(Icons.insert_drive_file_rounded, color: AppColors.violet, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(a['submissionContent'] as String,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                    ),
-                  ]),
+                GestureDetector(
+                  onTap: () async {
+                    final url = a['submissionContent'] as String;
+                    if (url.startsWith('http')) {
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border)),
+                    child: Row(children: [
+                      const Icon(Icons.insert_drive_file_rounded, color: AppColors.violet, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          (a['submissionContent'] as String).startsWith('http') ? 'View Uploaded File' : (a['submissionContent'] as String),
+                          style: TextStyle(
+                            fontSize: 13, 
+                            color: (a['submissionContent'] as String).startsWith('http') ? AppColors.violet : AppColors.textPrimary, 
+                            fontWeight: FontWeight.bold,
+                            decoration: (a['submissionContent'] as String).startsWith('http') ? TextDecoration.underline : TextDecoration.none,
+                          )
+                        ),
+                      ),
+                      if ((a['submissionContent'] as String).startsWith('http'))
+                        const Icon(Icons.open_in_new_rounded, color: AppColors.violet, size: 16),
+                    ]),
+                  ),
                 ),
                 const SizedBox(height: 18),
               ],
@@ -276,22 +338,32 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                   }
                   setS(() => submitting = true);
                   try {
-                    // For now, we simulate an upload by sending the file name to the backend.
-                    final fileName = '[FILE] ${pickedFile!.name}';
-                    final res = await ApiService.submitAssignment(
-                      assignmentId: int.parse(a['id']),
-                      content: fileName,
-                    );
-                    if (res['success'] == true) {
-                      _load();
+                    // Upload file to Cloudinary
+                    final uploadRes = await ApiService.uploadAssignmentFile(pickedFile!);
+                    if (uploadRes['success'] == true && uploadRes['data'] != null && uploadRes['data']['url'] != null) {
+                      final fileUrl = uploadRes['data']['url'] as String;
+                      // Submit URL as assignment content
+                      final res = await ApiService.submitAssignment(
+                        assignmentId: a['id'].toString(),
+                        content: fileUrl,
+                      );
+                      if (res['success'] == true) {
+                        _load();
+                        if (mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Assignment submitted successfully!'), backgroundColor: Colors.green));
+                        }
+                      } else {
+                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submission failed'), backgroundColor: Colors.red));
+                      }
+                    } else {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File upload failed'), backgroundColor: Colors.red));
                     }
-                  } catch (_) {}
-                  setS(() => submitting = false);
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Assignment submitted!'), backgroundColor: Colors.green));
+                  } catch (e) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
                   }
+                  if (mounted) setS(() => submitting = false);
                 },
               ),
             ),
@@ -306,6 +378,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
     final pointsCtrl  = TextEditingController(text: '100');
     String dueDate    = '';
     bool loading      = false;
+    PlatformFile? pickedAttachment;
 
     showModalBottomSheet(
       context: context,
@@ -360,6 +433,47 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                 ),
               )),
             ]),
+            const SizedBox(height: 14),
+            const Text('Attachment (Optional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () async {
+                FilePickerResult? result = await FilePicker.platform.pickFiles();
+                if (result != null) {
+                  setS(() => pickedAttachment = result.files.first);
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: pickedAttachment != null ? AppColors.cyan.withOpacity(0.1) : AppColors.background,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: pickedAttachment != null ? AppColors.cyan : AppColors.border, 
+                    style: pickedAttachment != null ? BorderStyle.solid : BorderStyle.none
+                  ),
+                ),
+                child: Row(children: [
+                  Icon(
+                    pickedAttachment != null ? Icons.check_circle_rounded : Icons.attach_file_rounded,
+                    color: pickedAttachment != null ? AppColors.cyan : AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      pickedAttachment != null ? pickedAttachment!.name : 'Tap to attach a file',
+                      style: TextStyle(
+                        color: pickedAttachment != null ? AppColors.cyan : AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ]),
+              ),
+            ),
             const SizedBox(height: 20),
             GradientButton(
               label: 'Create Assignment',
@@ -370,11 +484,19 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                 if (titleCtrl.text.isEmpty) return;
                 setS(() => loading = true);
                 try {
+                  String attachmentUrl = '';
+                  if (pickedAttachment != null) {
+                    final uploadRes = await ApiService.uploadAssignmentFile(pickedAttachment!);
+                    if (uploadRes['success'] == true && uploadRes['data'] != null && uploadRes['data']['url'] != null) {
+                      attachmentUrl = uploadRes['data']['url'] as String;
+                    }
+                  }
                   final res = await ApiService.createAssignment(widget.course?.id ?? '', {
                     'title': titleCtrl.text,
                     'description': descCtrl.text,
                     'points': int.tryParse(pointsCtrl.text) ?? 100,
                     'due': dueDate,
+                    'attachmentUrl': attachmentUrl,
                   });
                   if (res['success'] == true) {
                     _load();

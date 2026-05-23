@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/models.dart';
@@ -147,10 +148,10 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _UploadSheet(
         isUpdate: true,
-        onUpload: (name, category) async {
+        onUpload: (name, category, url) async {
           await ApiService.updateMaterialVersion(
             materialId: material.id.toString(),
-            fileUrl: 'https://example.com/updated_file',
+            fileUrl: url.isNotEmpty ? url : 'https://example.com/updated_file',
           );
           _load();
           if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -166,12 +167,12 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _UploadSheet(
-        onUpload: (name, category) async {
+        onUpload: (name, category, url) async {
           try {
             final res = await ApiService.uploadMaterial(
               courseId: widget.course.id,
               title: name,
-              url: 'https://example.com/demo_material.pdf', // Placeholder for demo upload
+              url: url.isNotEmpty ? url : 'https://example.com/demo_material.pdf',
               category: category,
             );
             if (res['success'] == true) {
@@ -421,8 +422,9 @@ class _MaterialCard extends StatelessWidget {
 }
 
 // ── Upload Bottom Sheet ────────────────────────────────────────────────────────
+
 class _UploadSheet extends StatefulWidget {
-  final Function(String name, String category) onUpload;
+  final Function(String name, String category, String url) onUpload;
   final bool isUpdate;
   const _UploadSheet({required this.onUpload, this.isUpdate = false});
 
@@ -434,6 +436,7 @@ class _UploadSheetState extends State<_UploadSheet> {
   final _nameCtrl = TextEditingController();
   String _selectedCat = 'lecture';
   bool _uploading = false;
+  PlatformFile? _pickedFile;
 
   final _cats = ['lecture', 'assignment', 'note', 'exam', 'exercise', 'template'];
 
@@ -445,11 +448,32 @@ class _UploadSheetState extends State<_UploadSheet> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a file name')));
       return;
     }
+    if (_pickedFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please attach a file')));
+      return;
+    }
+
     setState(() => _uploading = true);
-    await Future.delayed(const Duration(milliseconds: 600)); // Simulate upload
+
+    String uploadedUrl = '';
+    try {
+      final uploadRes = await ApiService.uploadAssignmentFile(_pickedFile!);
+      if (uploadRes['success'] == true && uploadRes['data'] != null && uploadRes['data']['url'] != null) {
+        uploadedUrl = uploadRes['data']['url'] as String;
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File upload failed to cloud storage')));
+        setState(() => _uploading = false);
+        return;
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error uploading: $e')));
+      setState(() => _uploading = false);
+      return;
+    }
+
     if (mounted) {
       Navigator.pop(context);
-      widget.onUpload(_nameCtrl.text.trim(), _selectedCat);
+      widget.onUpload(_nameCtrl.text.trim(), _selectedCat, uploadedUrl);
     }
   }
 
@@ -457,7 +481,7 @@ class _UploadSheetState extends State<_UploadSheet> {
   Widget build(BuildContext context) => Container(
     padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
     decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-    child: Padding(
+    child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Handle
@@ -472,7 +496,52 @@ class _UploadSheetState extends State<_UploadSheet> {
             labelText: 'File name',
             hintText: 'e.g. Lecture 7 - Calculus.pdf',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-            prefixIcon: const Icon(Icons.insert_drive_file_rounded),
+            prefixIcon: const Icon(Icons.title_rounded),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // File picker
+        const Text('Attachment', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () async {
+            FilePickerResult? result = await FilePicker.platform.pickFiles();
+            if (result != null) {
+              setState(() => _pickedFile = result.files.first);
+              if (_nameCtrl.text.isEmpty) {
+                _nameCtrl.text = _pickedFile!.name;
+              }
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+            decoration: BoxDecoration(
+              color: _pickedFile != null ? AppColors.cyan.withOpacity(0.1) : AppColors.background,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _pickedFile != null ? AppColors.cyan : AppColors.border, 
+                style: _pickedFile != null ? BorderStyle.solid : BorderStyle.none
+              ),
+            ),
+            child: Row(children: [
+              Icon(
+                _pickedFile != null ? Icons.check_circle_rounded : Icons.attach_file_rounded,
+                color: _pickedFile != null ? AppColors.cyan : AppColors.textSecondary,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _pickedFile != null ? _pickedFile!.name : 'Tap to attach a file',
+                  style: TextStyle(
+                    color: _pickedFile != null ? AppColors.cyan : AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ]),
           ),
         ),
         const SizedBox(height: 16),

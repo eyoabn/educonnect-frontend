@@ -53,16 +53,16 @@ class _LayoutScreenState extends State<LayoutScreen> {
   // ── Teacher screens ───────────────────────────────────────────────────────
   List<Widget> get _teacherScreens => [
     const DashboardScreen(),
-    const GradingScreen(),
+    const ChatScreen(),
     const NotificationsScreen(),
     ProfileScreen(onLogout: widget.onLogout),
   ];
 
   static const _teacherItems = [
-    _NavItem(icon: Icons.home_rounded,                 label: 'Home'),
-    _NavItem(icon: Icons.assignment_turned_in_rounded, label: 'Grade'),
-    _NavItem(icon: Icons.notifications_rounded,        label: 'Alerts'),
-    _NavItem(icon: Icons.person_rounded,               label: 'Profile'),
+    _NavItem(icon: Icons.home_rounded,          label: 'Home'),
+    _NavItem(icon: Icons.chat_bubble_rounded,   label: 'Chat'),
+    _NavItem(icon: Icons.notifications_rounded, label: 'Alerts'),
+    _NavItem(icon: Icons.person_rounded,        label: 'Profile'),
   ];
 
   @override
@@ -72,6 +72,8 @@ class _LayoutScreenState extends State<LayoutScreen> {
     // Pick the right screens + nav items based on role
     final List<Widget>   screens;
     final List<_NavItem> items;
+
+    print('DEBUG: LayoutScreen building. isAdmin: ${auth.isAdmin}, isTeacher: ${auth.isTeacher}');
 
     if (auth.isAdmin) {
       screens = _adminScreens;
@@ -120,44 +122,17 @@ class _BottomNav extends StatelessWidget {
     required this.onTap,
   });
 
-  // Admin uses a distinct gradient to make it visually clear
-  LinearGradient get _activeGradient {
-    if (isAdmin) {
-      return const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E40AF), Color(0xFF1E1B4B)]);
-    }
-    if (isTeacher) {
-      if (currentIndex == 0) return AppGradients.violet;
-      if (currentIndex == 1) return AppGradients.emerald;
-      if (currentIndex == 2) return AppGradients.fuchsia;
-      if (currentIndex == 3) return AppGradients.orange;
-      return AppGradients.violet;
-    }
-    // Student gradients
-    if (currentIndex == 0) return AppGradients.violet;
-    if (currentIndex == 1) return AppGradients.fuchsia;
-    if (currentIndex == 2) return AppGradients.cyan;
-    if (currentIndex == 3) return AppGradients.orange;
-    if (currentIndex == 4) return AppGradients.emerald;
-    return AppGradients.violet;
-  }
+  // Unified brand gradient — matches the home page header dark-blue
+  static const LinearGradient _brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF1E3A8A), Color(0xFF1E1B4B)],
+  );
+  static const Color _brandColor = Color(0xFF1E3A8A);
 
-  Color get _activeTextColor {
-    if (isAdmin) return AppColors.blue;
-    if (isTeacher) {
-      if (currentIndex == 0) return AppColors.violet;
-      if (currentIndex == 1) return AppColors.emerald;
-      if (currentIndex == 2) return AppColors.fuchsia;
-      if (currentIndex == 3) return AppColors.orange;
-      return AppColors.violet;
-    }
-    // Student colors
-    if (currentIndex == 0) return AppColors.violet;
-    if (currentIndex == 1) return AppColors.fuchsia;
-    if (currentIndex == 2) return AppColors.cyan;
-    if (currentIndex == 3) return AppColors.orange;
-    if (currentIndex == 4) return AppColors.emerald;
-    return AppColors.violet;
-  }
+  LinearGradient get _activeGradient => _brandGradient;
+
+  Color get _activeTextColor => _brandColor;
 
   @override
   Widget build(BuildContext context) => Container(

@@ -829,6 +829,7 @@ class ApiService {
             'points': (g['maxGrade'] as num?)?.toInt() ?? 100,
             'status': g['status'] as String? ?? 'pending',
             'description': g['description'] as String? ?? '',
+            'attachmentUrl': g['attachmentUrl'] as String? ?? '',
             'grade': (g['grade'] as num?)?.toInt(),
             'gi': mockId % 4,
             'submissionContent': g['submissionContent'] as String? ?? '',
@@ -893,6 +894,7 @@ class ApiService {
             'points': (g['maxGrade'] as num?)?.toInt() ?? 100,
             'description': g['description'] as String? ?? '',
             'gi': mockId % 4,
+            'attachmentUrl': g['attachmentUrl'] as String? ?? '',
             'submissionContent': g['submissionContent'] as String? ?? '',
           };
         }).toList();
@@ -934,14 +936,15 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> submitAssignment({
-    required int assignmentId,
+    required String assignmentId,
     required String content,
   }) async {
     try {
       await _loadToken();
       if (_token == null) return {'success': false};
 
-      final String realId = _assignmentIdMap[assignmentId] ?? assignmentId.toString();
+      final int? mockId = int.tryParse(assignmentId);
+      final String realId = (mockId != null ? _assignmentIdMap[mockId] : null) ?? assignmentId;
 
       final response = await http.put(
         Uri.parse('$baseUrl/grades/submit/$realId'),
@@ -958,6 +961,44 @@ class ApiService {
         return {'success': true, 'submission': jsonDecode(response.body)};
       }
       return {'success': false, 'message': 'Failed to submit'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> uploadAssignmentFile(var file) async {
+    try {
+      await _loadToken();
+      if (_token == null) return {'success': false};
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/grades/upload'),
+      );
+      request.headers['Authorization'] = 'Bearer $_token';
+
+      if (file.bytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'file',
+          file.bytes!,
+          filename: file.name,
+        ));
+      } else if (file.path != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'file',
+          file.path!,
+        ));
+      } else {
+        return {'success': false, 'message': 'Invalid file'};
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Upload failed'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }

@@ -391,24 +391,125 @@ class _TeacherStatBox extends StatelessWidget {
 
 class _StudentQuickActions extends StatelessWidget {
   const _StudentQuickActions();
+
+  void _showCoursePicker(BuildContext context) async {
+    // Load courses, then show picker
+    final courses = await ApiService.getCourses();
+    if (!context.mounted) return;
+
+    if (courses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No courses enrolled yet')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                'Select a Course',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                itemCount: courses.length,
+                itemBuilder: (ctx, i) {
+                  final c = courses[i];
+                  final grad = AppGradients.courseGradients[i % 4];
+                  final course = Course(
+                    id: c['id']?.toString() ?? '',
+                    name: c['name'] as String? ?? 'Course',
+                    teacher: c['teacher'] as String? ?? '',
+                    gradientIndex: i % 4,
+                    unread: 0, progress: 0,
+                  );
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: GlassCard(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => StudentGradesScreen(course: course),
+                        ));
+                      },
+                      padding: const EdgeInsets.all(14),
+                      child: Row(children: [
+                        GradientIconBox(gradient: grad, icon: Icons.menu_book_rounded, size: 44, iconSize: 20),
+                        const SizedBox(width: 14),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(c['name'] as String? ?? 'Course',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+                          Text(c['teacher'] as String? ?? '',
+                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        ])),
+                        const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+                      ]),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final actions = [
-      {'icon': Icons.search_rounded,   'label': 'Search',      'gi': 0, 'route': const SearchScreen()},
-      {'icon': Icons.assignment_rounded,'label': 'Assignments', 'gi': 1, 'route': const AssignmentsScreen()},
-      {'icon': Icons.chat_bubble_rounded,'label': 'Chat',       'gi': 2, 'route': const ChatScreen()},
-      {'icon': Icons.grade_rounded,     'label': 'My Grades',   'gi': 3, 'route': const StudentGradesScreen()},
+      {'icon': Icons.search_rounded,    'label': 'Search',      'gi': 0, 'type': 'search'},
+      {'icon': Icons.assignment_rounded,'label': 'Assignments',  'gi': 1, 'type': 'assignments'},
+      {'icon': Icons.chat_bubble_rounded,'label': 'Chat',        'gi': 2, 'type': 'chat'},
+      {'icon': Icons.grade_rounded,     'label': 'My Grades',   'gi': 3, 'type': 'grades'},
     ];
     return Row(children: actions.map((a) {
       final gi = a['gi'] as int;
-      final route = a['route'] as Widget?;
       return Expanded(child: GestureDetector(
         onTap: () {
-          if (route != null) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => route));
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('${a['label']} coming soon'), duration: const Duration(seconds: 1)));
+          switch (a['type']) {
+            case 'search':
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+              break;
+            case 'assignments':
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AssignmentsScreen()));
+              break;
+            case 'chat':
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen()));
+              break;
+            case 'grades':
+              _showCoursePicker(context);
+              break;
           }
         },
         child: GlassCard(
@@ -423,6 +524,7 @@ class _StudentQuickActions extends StatelessWidget {
     }).toList());
   }
 }
+
 
 class _TeacherQuickActions extends StatelessWidget {
   final List<Course> courses;

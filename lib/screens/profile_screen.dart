@@ -390,55 +390,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── Edit Profile Dialog ────────────────────────────────────────────────────
+  // ── Edit Profile Dialog ───────────────────────────────────────────────────────────────────
   void _showEditProfile(BuildContext context, AuthProvider auth) {
     final nameCtrl = TextEditingController(text: auth.displayName);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 20),
-            const Text('Edit Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 18),
-            TextFormField(
-              controller: nameCtrl,
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                prefixIcon: const Icon(Icons.person_outline_rounded),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+      builder: (sheetCtx) => Padding(
+        // Use the SHEET's context for viewInsets so keyboard push works
+        padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              const Text('Edit Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: nameCtrl,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: const Icon(Icons.person_outline_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.violet, width: 2)),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            GradientButton(
-              label: 'Save Changes',
-              gradient: AppGradients.violet,
-              icon: Icons.check_rounded,
-              onPressed: () async {
-                if (nameCtrl.text.trim().isNotEmpty) {
-                  await auth.updateName(nameCtrl.text.trim());
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile updated!'), backgroundColor: Colors.green));
+              const SizedBox(height: 20),
+              GradientButton(
+                label: 'Save Changes',
+                gradient: AppGradients.violet,
+                icon: Icons.check_rounded,
+                onPressed: () async {
+                  if (nameCtrl.text.trim().isNotEmpty) {
+                    await auth.updateName(nameCtrl.text.trim());
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Profile updated!'), backgroundColor: Colors.green));
+                    }
                   }
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-          ]),
+                },
+              ),
+              const SizedBox(height: 8),
+            ]),
+          ),
         ),
       ),
     );
   }
 
-  // ── Change Password Dialog ─────────────────────────────────────────────────
+  // ── Change Password Dialog ─────────────────────────────────────────────────────────────────────
   void _showChangePassword(BuildContext context) {
     final currentCtrl = TextEditingController();
     final newCtrl = TextEditingController();
@@ -449,60 +455,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => StatefulBuilder(builder: (ctx, setS) => Container(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
-            const SizedBox(height: 20),
-            const Text('Change Password', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 18),
-            _PassField(controller: currentCtrl, label: 'Current Password'),
-            const SizedBox(height: 12),
-            _PassField(controller: newCtrl, label: 'New Password'),
-            const SizedBox(height: 12),
-            _PassField(controller: confirmCtrl, label: 'Confirm New Password'),
-            const SizedBox(height: 20),
-            GradientButton(
-              label: 'Update Password',
-              gradient: AppGradients.violet,
-              isLoading: loading,
-              icon: Icons.lock_rounded,
-              onPressed: () async {
-                if (currentCtrl.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your current password')));
-                  return;
-                }
-                if (newCtrl.text != confirmCtrl.text) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
-                  return;
-                }
-                if (newCtrl.text.length < 6) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 6 characters')));
-                  return;
-                }
-                setS(() => loading = true);
-                final result = await ApiService.changePassword(
-                  currentPassword: currentCtrl.text,
-                  newPassword: newCtrl.text,
-                );
-                setS(() => loading = false);
-                if (context.mounted) {
-                  if (result['success'] == true) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(result['message'] ?? 'Password updated!'), backgroundColor: Colors.green));
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(result['message'] ?? 'Failed to update password'), backgroundColor: Colors.red));
+      builder: (sheetCtx) => StatefulBuilder(builder: (ctx, setS) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              const Text('Change Password', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 18),
+              _PassField(controller: currentCtrl, label: 'Current Password'),
+              const SizedBox(height: 12),
+              _PassField(controller: newCtrl, label: 'New Password'),
+              const SizedBox(height: 12),
+              _PassField(controller: confirmCtrl, label: 'Confirm New Password'),
+              const SizedBox(height: 20),
+              GradientButton(
+                label: 'Update Password',
+                gradient: AppGradients.violet,
+                isLoading: loading,
+                icon: Icons.lock_rounded,
+                onPressed: () async {
+                  if (currentCtrl.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your current password')));
+                    return;
                   }
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-          ]),
+                  if (newCtrl.text != confirmCtrl.text) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+                    return;
+                  }
+                  if (newCtrl.text.length < 6) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 6 characters')));
+                    return;
+                  }
+                  setS(() => loading = true);
+                  final result = await ApiService.changePassword(
+                    currentPassword: currentCtrl.text,
+                    newPassword: newCtrl.text,
+                  );
+                  setS(() => loading = false);
+                  if (context.mounted) {
+                    if (result['success'] == true) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result['message'] ?? 'Password updated!'), backgroundColor: Colors.green));
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result['message'] ?? 'Failed to update password'), backgroundColor: Colors.red));
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ]),
+          ),
         ),
       )),
     );
