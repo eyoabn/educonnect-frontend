@@ -53,7 +53,6 @@ class _LayoutScreenState extends State<LayoutScreen> {
   // ── Teacher screens ───────────────────────────────────────────────────────
   List<Widget> get _teacherScreens => [
     const DashboardScreen(),
-    const StudentListScreen(),
     const GradingScreen(),
     const NotificationsScreen(),
     ProfileScreen(onLogout: widget.onLogout),
@@ -61,7 +60,6 @@ class _LayoutScreenState extends State<LayoutScreen> {
 
   static const _teacherItems = [
     _NavItem(icon: Icons.home_rounded,                 label: 'Home'),
-    _NavItem(icon: Icons.people_rounded,               label: 'Students'),
     _NavItem(icon: Icons.assignment_turned_in_rounded, label: 'Grade'),
     _NavItem(icon: Icons.notifications_rounded,        label: 'Alerts'),
     _NavItem(icon: Icons.person_rounded,               label: 'Profile'),
@@ -131,9 +129,15 @@ class _BottomNav extends StatelessWidget {
       if (currentIndex == 0) return AppGradients.violet;
       if (currentIndex == 1) return AppGradients.emerald;
       if (currentIndex == 2) return AppGradients.fuchsia;
-      if (currentIndex == 3) return AppGradients.violet;
+      if (currentIndex == 3) return AppGradients.orange;
       return AppGradients.violet;
     }
+    // Student gradients
+    if (currentIndex == 0) return AppGradients.violet;
+    if (currentIndex == 1) return AppGradients.fuchsia;
+    if (currentIndex == 2) return AppGradients.cyan;
+    if (currentIndex == 3) return AppGradients.orange;
+    if (currentIndex == 4) return AppGradients.emerald;
     return AppGradients.violet;
   }
 
@@ -143,9 +147,15 @@ class _BottomNav extends StatelessWidget {
       if (currentIndex == 0) return AppColors.violet;
       if (currentIndex == 1) return AppColors.emerald;
       if (currentIndex == 2) return AppColors.fuchsia;
-      if (currentIndex == 3) return AppColors.violet;
+      if (currentIndex == 3) return AppColors.orange;
       return AppColors.violet;
     }
+    // Student colors
+    if (currentIndex == 0) return AppColors.violet;
+    if (currentIndex == 1) return AppColors.fuchsia;
+    if (currentIndex == 2) return AppColors.cyan;
+    if (currentIndex == 3) return AppColors.orange;
+    if (currentIndex == 4) return AppColors.emerald;
     return AppColors.violet;
   }
 

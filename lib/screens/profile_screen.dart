@@ -311,6 +311,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             isAdmin: isAdmin,
                             completedCount: _completedAssignments,
                             courseCount: _courseCount,
+                            classesCount: _classesCount,
+                            studentsCount: _studentsCount,
+                            pendingCount: _pendingCount,
+                            avgScore: _avgScore,
+                            adminCoursesCount: _adminCoursesCount,
+                            adminTeachersCount: _adminTeachersCount,
+                            adminStudentsCount: _adminStudentsCount,
+                            adminPendingCount: _adminPendingApprovalsCount,
                             key: const ValueKey('stats'),
                           )
                         : tabs[_tabIndex] == 'Badges'
@@ -344,8 +352,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _ActionRow(
               icon: Icons.help_outline_rounded, label: 'Help & Support',
               gradient: AppGradients.emerald,
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Help center coming soon'))),
+              onTap: () => _showHelpDialog(context),
             ),
             const SizedBox(height: 20),
 
@@ -464,6 +471,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               isLoading: loading,
               icon: Icons.lock_rounded,
               onPressed: () async {
+                if (currentCtrl.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your current password')));
+                  return;
+                }
                 if (newCtrl.text != confirmCtrl.text) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
                   return;
@@ -473,11 +484,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   return;
                 }
                 setS(() => loading = true);
-                await Future.delayed(const Duration(milliseconds: 800));
+                final result = await ApiService.changePassword(
+                  currentPassword: currentCtrl.text,
+                  newPassword: newCtrl.text,
+                );
+                setS(() => loading = false);
                 if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password updated successfully!'), backgroundColor: Colors.green));
+                  if (result['success'] == true) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result['message'] ?? 'Password updated!'), backgroundColor: Colors.green));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(result['message'] ?? 'Failed to update password'), backgroundColor: Colors.red));
+                  }
                 }
               },
             ),
@@ -485,6 +505,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ]),
         ),
       )),
+    );
+  }
+
+  // ── Help & Support Dialog ──────────────────────────────────────────────────
+  void _showHelpDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 20),
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(gradient: AppGradients.emerald, borderRadius: BorderRadius.circular(14)),
+              child: const Icon(Icons.help_outline_rounded, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 14),
+            const Text('Help & Support', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          ]),
+          const SizedBox(height: 20),
+          _HelpItem(icon: Icons.school_rounded, title: 'How to join a course', desc: 'Ask your teacher or admin to enroll you. Once enrolled, the course appears on your dashboard.'),
+          _HelpItem(icon: Icons.assignment_rounded, title: 'Submitting assignments', desc: 'Go to the Assignments tab, tap the assignment, then tap "Submit" to upload your file.'),
+          _HelpItem(icon: Icons.chat_bubble_rounded, title: 'Messaging teachers', desc: 'Open the Messages tab. Only teachers assigned to your courses will appear as contacts.'),
+          _HelpItem(icon: Icons.notifications_rounded, title: 'Notifications', desc: 'You receive notifications for new announcements, graded assignments, and messages.'),
+          _HelpItem(icon: Icons.lock_rounded, title: 'Forgot your password?', desc: 'Go to Profile → Change Password and enter your current password to set a new one.'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: AppGradients.emerald,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(children: [
+              const Icon(Icons.mail_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Contact Admin: admin@educonnect.edu',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 
@@ -522,41 +593,73 @@ class _StatsTab extends StatelessWidget {
   final bool isAdmin;
   final int completedCount;
   final int courseCount;
-  
+  // Teacher-specific
+  final int classesCount;
+  final int studentsCount;
+  final int pendingCount;
+  final double avgScore;
+  // Admin-specific
+  final int adminCoursesCount;
+  final int adminTeachersCount;
+  final int adminStudentsCount;
+  final int adminPendingCount;
+
   const _StatsTab({
-    super.key, 
-    required this.isTeacher, 
+    super.key,
+    required this.isTeacher,
     required this.isAdmin,
     required this.completedCount,
     required this.courseCount,
+    this.classesCount = 0,
+    this.studentsCount = 0,
+    this.pendingCount = 0,
+    this.avgScore = 0.0,
+    this.adminCoursesCount = 0,
+    this.adminTeachersCount = 0,
+    this.adminStudentsCount = 0,
+    this.adminPendingCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     if (isAdmin) {
+      // Compute real approval rate from actual data
+      final totalApproved = adminTeachersCount + adminStudentsCount;
+      final totalAll = totalApproved + adminPendingCount;
+      final approvalRate = totalAll > 0 ? (totalApproved / totalAll).clamp(0.0, 1.0) : 1.0;
+      // Course fill rate: teachers assigned / total courses
+      final teacherFill = adminCoursesCount > 0
+          ? (adminTeachersCount.clamp(0, adminCoursesCount) / adminCoursesCount).clamp(0.0, 1.0)
+          : 0.0;
+      // Student/course ratio as engagement proxy (cap at 30 students per course = 100%)
+      final maxEngagement = adminCoursesCount * 30;
+      final engagementRate = maxEngagement > 0
+          ? (adminStudentsCount / maxEngagement).clamp(0.0, 1.0)
+          : 0.0;
+
       return Column(children: [
         GlassCard(
           padding: const EdgeInsets.all(18),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const SectionHeader(title: 'System Health'),
+            const SectionHeader(title: 'Platform Overview'),
             const SizedBox(height: 16),
-            const _ProgressRow(label: 'Server Status', percent: 0.99, color: AppColors.emerald),
+            _ProgressRow(label: 'User Approval Rate', percent: approvalRate, color: AppColors.emerald),
             const SizedBox(height: 12),
-            const _ProgressRow(label: 'Database Sync', percent: 1.00, color: AppColors.violet),
+            _ProgressRow(label: 'Course Teacher Coverage', percent: teacherFill, color: AppColors.violet),
             const SizedBox(height: 12),
-            const _ProgressRow(label: 'Subsystems Load', percent: 0.28, color: AppColors.cyan),
+            _ProgressRow(label: 'Student Enrollment', percent: engagementRate, color: AppColors.cyan),
           ]),
         ),
         const SizedBox(height: 12),
         GlassCard(
           padding: const EdgeInsets.all(18),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const SectionHeader(title: 'System Distribution'),
+            const SectionHeader(title: 'System Summary'),
             const SizedBox(height: 14),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: const [
-              _WeekStat(label: 'Server Nodes', value: '3'),
-              _WeekStat(label: 'API Gateways', value: '2'),
-              _WeekStat(label: 'SSL Certs', value: 'Active'),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+              _WeekStat(label: 'Active Courses', value: adminCoursesCount.toString()),
+              _WeekStat(label: 'Verified Users', value: totalApproved.toString()),
+              _WeekStat(label: 'Pending', value: adminPendingCount.toString()),
             ]),
           ]),
         ),
@@ -564,29 +667,36 @@ class _StatsTab extends StatelessWidget {
     }
 
     if (isTeacher) {
+      // Use real data: pendingCount = ungraded submissions, avgScore = class average
+      final gradingRate = studentsCount > 0
+          ? ((studentsCount - pendingCount).clamp(0, studentsCount) / studentsCount).clamp(0.0, 1.0)
+          : (pendingCount == 0 ? 1.0 : 0.5);
+      final avgRate = avgScore > 0 ? (avgScore / 100.0).clamp(0.0, 1.0) : 0.0;
+      final classLoad = classesCount > 0 ? (classesCount / 5.0).clamp(0.0, 1.0) : 0.0;
+
       return Column(children: [
         GlassCard(
           padding: const EdgeInsets.all(18),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const SectionHeader(title: 'Class Analytics'),
             const SizedBox(height: 16),
-            const _ProgressRow(label: 'Grading Completion', percent: 0.85, color: AppColors.violet),
+            _ProgressRow(label: 'Grading Completion', percent: gradingRate, color: AppColors.violet),
             const SizedBox(height: 12),
-            const _ProgressRow(label: 'Syllabus Coverage', percent: 0.75, color: AppColors.emerald),
+            _ProgressRow(label: 'Average Student Score', percent: avgRate, color: AppColors.emerald),
             const SizedBox(height: 12),
-            const _ProgressRow(label: 'Average Class Attendance', percent: 0.94, color: AppColors.cyan),
+            _ProgressRow(label: 'Teaching Load', percent: classLoad, color: AppColors.cyan),
           ]),
         ),
         const SizedBox(height: 12),
         GlassCard(
           padding: const EdgeInsets.all(18),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const SectionHeader(title: 'Activity This Week'),
+            const SectionHeader(title: 'Teaching Summary'),
             const SizedBox(height: 14),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: const [
-              _WeekStat(label: 'Q&A Answered', value: '14'),
-              _WeekStat(label: 'Posts Made', value: '6'),
-              _WeekStat(label: 'Files Shared', value: '11'),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+              _WeekStat(label: 'Classes', value: classesCount.toString()),
+              _WeekStat(label: 'Students', value: studentsCount.toString()),
+              _WeekStat(label: 'Pending', value: pendingCount.toString()),
             ]),
           ]),
         ),
@@ -675,35 +785,131 @@ class _BadgesTab extends StatelessWidget {
   );
 }
 
-class _ActivityTab extends StatelessWidget {
+class _ActivityTab extends StatefulWidget {
   const _ActivityTab({super.key});
-  final _activities = const [
-    {'action': 'Submitted assignment', 'course': 'Mathematics 101', 'time': '2 hours ago', 'gi': 0, 'icon': Icons.assignment_turned_in_rounded},
-    {'action': 'Downloaded material', 'course': 'Physics Advanced', 'time': '5 hours ago', 'gi': 1, 'icon': Icons.download_rounded},
-    {'action': 'Joined discussion', 'course': 'Computer Science', 'time': '1 day ago', 'gi': 2, 'icon': Icons.forum_rounded},
-    {'action': 'Completed quiz', 'course': 'English Literature', 'time': '2 days ago', 'gi': 3, 'icon': Icons.quiz_rounded},
-    {'action': 'Viewed announcement', 'course': 'Mathematics 101', 'time': '3 days ago', 'gi': 0, 'icon': Icons.campaign_rounded},
-  ];
+  @override
+  State<_ActivityTab> createState() => _ActivityTabState();
+}
+
+class _ActivityTabState extends State<_ActivityTab> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _items = [];
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: _activities.map((a) => Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: GlassCard(
-        padding: const EdgeInsets.all(14),
-        child: Row(children: [
-          GradientIconBox(gradient: AppGradients.courseGradients[(a['gi'] as int) % 4], icon: a['icon'] as IconData, size: 42, iconSize: 20),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(a['action'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
-            const SizedBox(height: 2),
-            Text(a['course'] as String, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          ])),
-          Text(a['time'] as String, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final List<Map<String, dynamic>> items = [];
+
+      // Load announcements — real data for all roles
+      final announcements = await ApiService.getAnnouncements();
+      for (final ann in announcements.take(3)) {
+        final courseName = ann['courseName']?.toString() ??
+            ann['course']?.toString() ??
+            'General';
+        items.add({
+          'action': ann['title']?.toString() ?? 'New Announcement',
+          'course': courseName,
+          'time': _fmt(ann['createdAt']?.toString()),
+          'gi': items.length % 4,
+          'iconCode': Icons.campaign_rounded.codePoint,
+        });
+      }
+
+      // Load student submissions — real assignment activity
+      if (!auth.isTeacher && !auth.isAdmin) {
+        final grades = await ApiService.getGrades(auth.id);
+        for (final g in grades.take(4)) {
+          final status = g['status']?.toString() ?? '';
+          if (status == 'graded' || status == 'submitted') {
+            items.add({
+              'action': 'Submitted: ${g['assignmentName']?.toString() ?? 'Assignment'}',
+              'course': g['course']?.toString() ?? 'Course',
+              'time': _fmt(g['submittedDate']?.toString() ?? g['createdAt']?.toString()),
+              'gi': items.length % 4,
+              'iconCode': Icons.assignment_turned_in_rounded.codePoint,
+            });
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _items = items.take(5).toList();
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _fmt(String? s) {
+    if (s == null) return 'Recently';
+    try {
+      final dt = DateTime.parse(s).toLocal();
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+      if (diff.inHours < 24) return '${diff.inHours}h ago';
+      if (diff.inDays < 7) return '${diff.inDays}d ago';
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) {
+      return 'Recently';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 30),
+        child: CircularProgressIndicator(),
+      ));
+    }
+    if (_items.isEmpty) {
+      return GlassCard(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [
+          Icon(Icons.history_rounded, size: 40, color: AppColors.textSecondary),
+          SizedBox(height: 12),
+          Text('No recent activity', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
         ]),
-      ),
-    )).toList(),
-  );
+      );
+    }
+    return Column(
+      children: _items.map((a) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: GlassCard(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            GradientIconBox(
+              gradient: AppGradients.courseGradients[(a['gi'] as int) % 4],
+              icon: IconData(a['iconCode'] as int, fontFamily: 'MaterialIcons'),
+              size: 42,
+              iconSize: 20,
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(a['action'] as String,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              Text(a['course'] as String,
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+            ])),
+            Text(a['time'] as String, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          ]),
+        ),
+      )).toList(),
+    );
+  }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -762,6 +968,36 @@ class _WeekStat extends StatelessWidget {
     Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
   ]);
 }
+
+class _HelpItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String desc;
+  const _HelpItem({required this.icon, required this.title, required this.desc});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppColors.textPrimary, size: 22),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+              const SizedBox(height: 4),
+              Text(desc, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
 class _PassField extends StatefulWidget {
   final TextEditingController controller;

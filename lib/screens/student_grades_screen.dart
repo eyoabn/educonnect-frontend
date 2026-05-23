@@ -145,7 +145,7 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
                         itemBuilder: (_, i) {
                           final g = filtered[i];
                           final grade = g['grade'] as int?;
-                          final gi = (g['gi'] as int) % 4;
+                          final gi = (g['gi'] as int? ?? 0) % 4;
                           return GlassCard(
                             onTap: grade != null ? () => _showDetail(g) : null,
                             padding: const EdgeInsets.all(16),
@@ -156,16 +156,16 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
                               ),
                               const SizedBox(width: 14),
                               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(g['assignment'] as String,
+                                Text(g['title'] as String? ?? 'Assignment',
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
                                 const SizedBox(height: 4),
-                                Text(g['course'] as String,
+                                Text(g['course'] as String? ?? 'Course',
                                     style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                 const SizedBox(height: 4),
                                 Row(children: [
                                   const Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textSecondary),
                                   const SizedBox(width: 4),
-                                  Text(g['date'] as String, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                  Text(g['due'] as String? ?? 'Recently', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                 ]),
                                 if (grade != null) ...[
                                   const SizedBox(height: 8),
@@ -224,9 +224,9 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: 20),
-          Text(g['assignment'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textPrimary)),
+          Text(g['title'] as String? ?? 'Assignment', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textPrimary)),
           const SizedBox(height: 4),
-          Text(g['course'] as String, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          Text(g['course'] as String? ?? 'Course', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           const SizedBox(height: 20),
           Row(children: [
             Container(
@@ -249,7 +249,7 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
                 height: 10,
               ),
               const SizedBox(height: 8),
-              Text('$grade out of ${g['maxGrade']} points',
+              Text('$grade out of ${g['points'] ?? 100} points',
                   style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             ])),
           ]),

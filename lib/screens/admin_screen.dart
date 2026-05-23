@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/models.dart';
 import '../services/api_service.dart';
 import '../services/auth_provider.dart';
 import '../theme/app_theme.dart';
@@ -121,7 +122,7 @@ class AdminPost {
   });
 
   factory AdminPost.fromJson(Map<String, dynamic> j) => AdminPost(
-    id: (j['_id'] ?? j['id']).toString(),
+    id: (j['type'] == 'announcement' ? j['id'] : (j['_id'] ?? j['id'])).toString(),
     title: j['title'] ?? '',
     content: j['content'] ?? '',
     authorName: j['authorId'] is Map ? (j['authorId']['name'] ?? 'Unknown') : (j['authorName'] ?? 'Unknown'),
@@ -192,8 +193,25 @@ class _AdminScreenState extends State<AdminScreen>
 
   Future<List<Map<String, dynamic>>> _loadPosts() async {
     try {
-      final announcements = await ApiService.getAnnouncements();
-      return announcements.map((ann) => {...ann, 'type': 'announcement'} as Map<String, dynamic>).toList();
+      final results = await Future.wait([
+        ApiService.getAnnouncements(),
+        ApiService.getAllQuestions(),
+      ]);
+      final announcements = results[0] as List<Map<String, dynamic>>;
+      final questions = results[1] as List<Question>;
+
+      final List<Map<String, dynamic>> allPosts = [];
+      allPosts.addAll(announcements.map((ann) => {...ann, 'type': 'announcement'}));
+      allPosts.addAll(questions.map((q) => {
+        'id': q.id,
+        'title': q.title,
+        'content': q.content,
+        'authorName': q.authorName,
+        'type': 'question',
+        'createdAt': q.createdAt,
+        'course': 'Q&A Forum',
+      }));
+      return allPosts;
     } catch (_) {
       return [];
     }
@@ -467,7 +485,7 @@ class _AdminScreenState extends State<AdminScreen>
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 indicatorColor: AppColors.violet,
                 indicatorWeight: 3,
-                isScrollable: false,
+                isScrollable: true,
                 tabs: [
                   Tab(text: 'Courses (${_courses.length})'),
                   Tab(child: _TabLabel(
@@ -480,6 +498,7 @@ class _AdminScreenState extends State<AdminScreen>
                     count: _students.length,
                     pending: _students.where((u) => !u.approved).length,
                   )),
+                  Tab(text: 'Posts (${_posts.length})'),
                 ],
               ),
             ),
@@ -498,6 +517,7 @@ class _AdminScreenState extends State<AdminScreen>
                           ),
                           _UserTab(users: _teachers, role: 'teacher', onApprove: _approveUser, onDelete: _deleteUser),
                           _UserTab(users: _students, role: 'student', onApprove: _approveUser, onDelete: _deleteUser),
+                          _PostsTab(posts: _posts, onDelete: _deletePost),
                         ]),
             ),
           ],

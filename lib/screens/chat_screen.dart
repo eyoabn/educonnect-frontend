@@ -6,39 +6,7 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 
-// ── Mock data ──────────────────────────────────────────────────────────────
-final _mockContacts = [
-  ChatContact(id: '1', name: 'Dr. Sarah Johnson', role: 'Mathematics Teacher', avatar: 'SJ', online: true, unread: 2, lastMessage: 'See you tomorrow!', gradientIndex: 0),
-  ChatContact(id: '2', name: 'Prof. Michael Chen', role: 'Physics Teacher', avatar: 'MC', online: true, unread: 0, lastMessage: 'Great work on the lab report', gradientIndex: 1),
-  ChatContact(id: '3', name: 'Dr. Emily Parker', role: 'CS Teacher', avatar: 'EP', online: false, unread: 1, lastMessage: 'Assignment deadline extended', gradientIndex: 2),
-  ChatContact(id: '4', name: 'Ms. Rachel Adams', role: 'English Teacher', avatar: 'RA', online: true, unread: 0, lastMessage: 'Thanks for your essay', gradientIndex: 3),
-  ChatContact(id: '5', name: 'Study Group A', role: '5 members', avatar: 'SG', online: true, unread: 5, lastMessage: 'Anyone free for study session?', gradientIndex: 2),
-];
 
-final _mockMessages = <String, List<ChatMessage>>{
-  '1': [
-    ChatMessage(id: 1, sender: 'Dr. Sarah Johnson', content: "Good morning! Don't forget about tomorrow's quiz.", time: '09:30 AM', isSelf: false),
-    ChatMessage(id: 2, sender: 'You', content: 'Will the quiz cover chapter 5?', time: '09:35 AM', isSelf: true),
-    ChatMessage(id: 3, sender: 'Dr. Sarah Johnson', content: 'Yes, chapters 4 and 5 will be included. Focus on integration formulas.', time: '09:40 AM', isSelf: false),
-    ChatMessage(id: 4, sender: 'You', content: 'Thank you for clarifying!', time: '09:42 AM', isSelf: true),
-  ],
-  '2': [
-    ChatMessage(id: 1, sender: 'Prof. Michael Chen', content: 'Great work on the lab report!', time: '10:15 AM', isSelf: false),
-    ChatMessage(id: 2, sender: 'You', content: 'Thank you professor! I really enjoyed the experiment.', time: '10:20 AM', isSelf: true),
-  ],
-  '3': [
-    ChatMessage(id: 1, sender: 'Dr. Emily Parker', content: 'Assignment deadline has been extended to next Friday.', time: 'Yesterday', isSelf: false),
-    ChatMessage(id: 2, sender: 'You', content: "That's great news, thank you!", time: 'Yesterday', isSelf: true),
-  ],
-  '4': [
-    ChatMessage(id: 1, sender: 'Ms. Rachel Adams', content: 'Thanks for your essay on Shakespeare. Very insightful!', time: '2 days ago', isSelf: false),
-  ],
-  '5': [
-    ChatMessage(id: 1, sender: 'John', content: 'Anyone free for a study session this weekend?', time: '11:00 AM', isSelf: false),
-    ChatMessage(id: 2, sender: 'You', content: "I'm available Saturday afternoon", time: '11:05 AM', isSelf: true),
-    ChatMessage(id: 3, sender: 'Sarah', content: "Me too! Let's meet at the library", time: '11:10 AM', isSelf: false),
-  ],
-};
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -91,7 +59,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _loading = false; 
       }); 
     } catch (_) {
-      if (mounted) setState(() { _contacts = _mockContacts; _filtered = _mockContacts; _loading = false; });
+      if (mounted) setState(() { _contacts = []; _filtered = []; _loading = false; });
     }
   }
 
@@ -289,8 +257,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       _scrollToBottom();
       ApiService.markChatAsRead(widget.contact.id);
     } catch (_) {
-      if (mounted) setState(() { _messages = List.from(_mockMessages[widget.contact.id] ?? []); _loading = false; });
-      _scrollToBottom();
+      if (mounted) setState(() { _messages = []; _loading = false; });
     }
   }
 

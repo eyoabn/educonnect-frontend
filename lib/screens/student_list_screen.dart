@@ -36,45 +36,57 @@ class _StudentListScreenState extends State<StudentListScreen> {
     try {
       final courseData = await ApiService.getCourse(widget.course!.id);
       final rawStudents = List<dynamic>.from(courseData['studentsList'] ?? []);
-      
+
+      // Fetch all grade records for this course
       final submissions = await ApiService.getSubmissions(widget.course!.id);
-      
+
       final mapped = rawStudents.asMap().entries.map((entry) {
         final i = entry.key;
         final s = entry.value;
+        // studentId can come as a populated object or raw string
         final studentId = s['_id']?.toString() ?? s['id']?.toString() ?? i.toString();
-        
-        final studentSubmissions = submissions.where((sub) => sub['studentId'] == studentId).toList();
-        
+
+        // Match submissions: studentId in Grade doc may be raw string or populated {_id, name}
+        final studentSubs = submissions.where((sub) {
+          final rawSid = sub['studentId'];
+          if (rawSid == null) return false;
+          if (rawSid is Map) {
+            return rawSid['_id']?.toString() == studentId ||
+                   rawSid['id']?.toString() == studentId;
+          }
+          return rawSid.toString() == studentId;
+        }).toList();
+
         int totalGrade = 0;
         int gradedCount = 0;
         int submittedCount = 0;
-        int totalAssigned = studentSubmissions.length;
-        
-        for (var sub in studentSubmissions) {
-          if (sub['status'] == 'graded' && sub['grade'] != null) {
-            totalGrade += sub['grade'] as int;
+        final int totalAssigned = studentSubs.length;
+
+        for (var sub in studentSubs) {
+          final status = sub['status']?.toString() ?? '';
+          if (status == 'graded' && sub['grade'] != null) {
+            totalGrade += (sub['grade'] as num).toInt();
             gradedCount++;
             submittedCount++;
-          } else if (sub['status'] == 'submitted') {
+          } else if (status == 'submitted') {
             submittedCount++;
           }
         }
-        
-        int avg = gradedCount > 0 ? (totalGrade / gradedCount).round() : 0;
-        
+
+        // avg is null (-1) if no grades yet — shown as "—" instead of 0%
+        final int avg = gradedCount > 0 ? (totalGrade / gradedCount).round() : -1;
+
         return {
           'id': studentId,
           'name': s['name'] ?? 'Unknown',
           'email': s['email'] ?? '',
           'avg': avg,
           'submitted': submittedCount,
-          'total': totalAssigned > 0 ? totalAssigned : 1, // Avoid divide by zero visual
-          'lastActive': '1 hour ago',
+          'total': totalAssigned > 0 ? totalAssigned : 1,
           'gi': i % 4,
         };
       }).toList();
-      
+
       setState(() {
         _students = mapped;
         _loading = false;
@@ -97,21 +109,34 @@ class _StudentListScreenState extends State<StudentListScreen> {
           (s['name'] as String).toLowerCase().contains(_query.toLowerCase()) ||
           (s['email'] as String).toLowerCase().contains(_query.toLowerCase())).toList();
     }
+    // For filters, treat avg=-1 (ungraded) as 0
     if (_filterIndex == 1) list = list.where((s) => (s['avg'] as int) >= 85).toList();
-    if (_filterIndex == 2) list = list.where((s) => (s['avg'] as int) < 65).toList();
+    if (_filterIndex == 2) list = list.where((s) {
+      final a = s['avg'] as int;
+      return a >= 0 && a < 65;
+    }).toList();
     return list;
   }
 
   double get _classAvg {
-    if (_students.isEmpty) return 0;
-    return _students.fold(0.0, (s, st) => s + (st['avg'] as int)) / _students.length;
+    final graded = _students.where((s) => (s['avg'] as int) >= 0).toList();
+    if (graded.isEmpty) return 0;
+    return graded.fold(0.0, (sum, st) => sum + (st['avg'] as int)) / graded.length;
   }
 
-  int get _atRisk => _students.where((s) => (s['avg'] as int) < 65).length;
+  int get _atRisk => _students.where((s) {
+    final a = s['avg'] as int;
+    return a >= 0 && a < 65;
+  }).length;
   int get _highPerf => _students.where((s) => (s['avg'] as int) >= 85).length;
 
   Color _perfColor(int avg) =>
-      avg >= 85 ? AppColors.emerald : avg >= 65 ? AppColors.orange : AppColors.rose;
+      avg < 0 ? AppColors.textSecondary
+      : avg >= 85 ? AppColors.emerald
+      : avg >= 65 ? AppColors.orange
+      : AppColors.rose;
+
+  String _avgLabel(int avg) => avg < 0 ? '—' : '$avg%';
 
   String _initials(String name) =>
       name.split(' ').map((w) => w.isEmpty ? '' : w[0]).take(2).join().toUpperCase();
@@ -158,22 +183,15 @@ class _StudentListScreenState extends State<StudentListScreen> {
               const SizedBox(height: 4),
               Text(student['email'] as String,
                   style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-              const SizedBox(height: 4),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondary),
-                const SizedBox(width: 4),
-                Text('Last active: ${student['lastActive']}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              ]),
             ]),
           ),
           // Stats
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(children: [
-              Expanded(child: _DetailStat(label: 'Average', value: '$avg%', color: _perfColor(avg))),
+              Expanded(child: _DetailStat(label: 'Average', value: _avgLabel(avg), color: _perfColor(avg))),
               Expanded(child: _DetailStat(label: 'Submitted', value: '$sub/$tot', color: AppColors.cyan)),
-              Expanded(child: _DetailStat(label: 'Completion', value: '${((sub / tot) * 100).round()}%', color: AppColors.violet)),
+              Expanded(child: _DetailStat(label: 'Completion', value: tot > 1 ? '${((sub / tot) * 100).round()}%' : '—', color: AppColors.violet)),
             ]),
           ),
           const SizedBox(height: 16),
@@ -183,11 +201,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 const Text('Average Score', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                Text('$avg / 100', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _perfColor(avg))),
+                Text(avg >= 0 ? '$avg / 100' : 'Not graded yet', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _perfColor(avg))),
               ]),
               const SizedBox(height: 8),
               GradientProgressBar(
-                progress: avg / 100,
+                progress: avg >= 0 ? avg / 100 : 0,
                 gradient: LinearGradient(colors: [_perfColor(avg), _perfColor(avg).withOpacity(0.6)]),
                 height: 10,
               ),
@@ -278,7 +296,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               Row(children: [
                 Expanded(child: _HeaderStat(label: 'Total',     value: '${_students.length}')),
                 const SizedBox(width: 8),
-                Expanded(child: _HeaderStat(label: 'Avg Score', value: '${_classAvg.toStringAsFixed(0)}%')),
+                Expanded(child: _HeaderStat(label: 'Avg Score', value: _classAvg > 0 ? '${_classAvg.toStringAsFixed(0)}%' : '—')),
                 const SizedBox(width: 8),
                 Expanded(child: _HeaderStat(label: 'At Risk',   value: '$_atRisk')),
                 const SizedBox(width: 8),
@@ -371,7 +389,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                             // Submission progress
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                Text('Submitted', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                const Text('Submitted', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                 Text('$sub/$tot', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                               ]),
                               const SizedBox(height: 3),
@@ -389,15 +407,20 @@ class _StudentListScreenState extends State<StudentListScreen> {
                           Container(
                             width: 46, height: 46,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [_perfColor(avg), _perfColor(avg).withOpacity(0.7)]),
+                              gradient: avg >= 0
+                                ? LinearGradient(colors: [_perfColor(avg), _perfColor(avg).withOpacity(0.7)])
+                                : LinearGradient(colors: [AppColors.textSecondary, AppColors.textSecondary.withOpacity(0.7)]),
                               shape: BoxShape.circle,
                               boxShadow: [BoxShadow(color: _perfColor(avg).withOpacity(0.35), blurRadius: 8)],
                             ),
-                            child: Center(child: Text('$avg', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
+                            child: Center(child: Text(
+                              avg >= 0 ? '$avg' : '—',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
                           ),
                           const SizedBox(height: 4),
-                          Text(avg >= 85 ? 'Top' : avg < 65 ? 'Risk' : 'Good',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _perfColor(avg))),
+                          Text(
+                            avg < 0 ? 'N/A' : avg >= 85 ? 'Top' : avg < 65 ? 'Risk' : 'OK',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _perfColor(avg))),
                         ]),
                       ]),
                     );

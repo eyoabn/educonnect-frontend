@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import 'create_post_screen.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   final Course course;
@@ -81,6 +84,125 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         starred: a.starred,
       );
     } catch (_) {}
+  }
+
+  Future<void> _deleteAnnouncement(Announcement a) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Announcement'),
+        content: const Text('Are you sure you want to permanently delete this announcement?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final res = await ApiService.deleteAnnouncement(announcementId: a.id);
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Announcement deleted successfully'), backgroundColor: Colors.red),
+        );
+        _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? 'Failed to delete announcement')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _editAnnouncement(Announcement a) async {
+    final titleCtrl = TextEditingController(text: a.title);
+    final contentCtrl = TextEditingController(text: a.content);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              const Text('Edit Announcement', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 18),
+              TextFormField(
+                controller: titleCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Title',
+                  prefixIcon: const Icon(Icons.title_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: contentCtrl,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  labelText: 'Content',
+                  prefixIcon: const Icon(Icons.notes_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              GradientButton(
+                label: 'Save Changes',
+                gradient: AppGradients.orange,
+                icon: Icons.check_rounded,
+                onPressed: () async {
+                  if (titleCtrl.text.trim().isNotEmpty && contentCtrl.text.trim().isNotEmpty) {
+                    Navigator.pop(ctx);
+                    try {
+                      final res = await ApiService.updateAnnouncement(
+                        announcementId: a.id,
+                        title: titleCtrl.text.trim(),
+                        content: contentCtrl.text.trim(),
+                      );
+                      if (res['success'] == true) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Announcement updated!'), backgroundColor: Colors.green),
+                        );
+                        _load();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(res['message'] ?? 'Failed to update announcement')),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -179,6 +301,8 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                   announcement: _filtered[i],
                                   index: i,
                                   onStar: () => _toggleStar(_filtered[i]),
+                                  onEdit: () => _editAnnouncement(_filtered[i]),
+                                  onDelete: () => _deleteAnnouncement(_filtered[i]),
                                 ),
                               ),
                               childCount: _filtered.length,
@@ -191,6 +315,21 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
           ),
         ],
       ),
+      floatingActionButton: (context.watch<AuthProvider>().isTeacher || context.watch<AuthProvider>().isAdmin)
+          ? FloatingActionButton(
+              onPressed: () async {
+                final created = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+                );
+                if (created == true) {
+                  _load();
+                }
+              },
+              backgroundColor: AppColors.orange,
+              child: const Icon(Icons.add_rounded, color: Colors.white),
+            )
+          : null,
     );
   }
 }
@@ -199,15 +338,20 @@ class _AnnouncementCard extends StatelessWidget {
   final Announcement announcement;
   final int index;
   final VoidCallback onStar;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _AnnouncementCard({
     required this.announcement,
     required this.index,
     required this.onStar,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     final grad = index % 2 == 0 ? AppGradients.orange : AppGradients.violet;
     return Stack(
       clipBehavior: Clip.none,
@@ -270,6 +414,35 @@ class _AnnouncementCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (auth.isTeacher || auth.isAdmin) ...[
+                    const SizedBox(width: 4),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: AppColors.textSecondary, size: 20),
+                      padding: EdgeInsets.zero,
+                      onSelected: (val) {
+                        if (val == 'edit' && onEdit != null) onEdit!();
+                        if (val == 'delete' && onDelete != null) onDelete!();
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(children: [
+                            Icon(Icons.edit_rounded, size: 16, color: AppColors.textPrimary),
+                            SizedBox(width: 8),
+                            Text('Edit', style: TextStyle(fontSize: 13)),
+                          ]),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(children: [
+                            Icon(Icons.delete_rounded, size: 16, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: Colors.red, fontSize: 13)),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),

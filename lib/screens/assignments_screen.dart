@@ -5,7 +5,7 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
 import '../models/models.dart';
-
+import 'package:file_picker/file_picker.dart';
 class AssignmentsScreen extends StatefulWidget {
   final Course? course;
   const AssignmentsScreen({super.key, this.course});
@@ -40,7 +40,24 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
       
       List<Map<String, dynamic>> data = [];
       if (auth.isTeacher) {
-        data = await ApiService.getSubmissions(widget.course?.id ?? '');
+        final submissions = await ApiService.getSubmissions(widget.course?.id ?? '');
+        final Map<String, Map<String, dynamic>> uniqueAssignments = {};
+        for (var s in submissions) {
+          final title = s['assignment'] as String? ?? 'Assignment';
+          if (!uniqueAssignments.containsKey(title)) {
+            uniqueAssignments[title] = {
+              'id': s['id'],
+              'title': title,
+              'course': s['course'] as String? ?? 'Course',
+              'due': s['due'] as String? ?? s['time'] as String? ?? 'TBD',
+              'points': s['points'] as int? ?? 100,
+              'status': 'pending',
+              'gi': s['gi'] as int? ?? s['gradientIndex'] as int? ?? 0,
+              'description': s['description'] as String? ?? '',
+            };
+          }
+        }
+        data = uniqueAssignments.values.toList();
       } else {
         data = await ApiService.getAssignments(studentId);
       }
@@ -86,7 +103,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
 
   void _showDetail(Map<String, dynamic> a) {
     final auth = context.read<AuthProvider>();
-    final notesCtrl = TextEditingController();
+    PlatformFile? pickedFile;
     bool submitting = false;
 
     showModalBottomSheet(
@@ -174,24 +191,69 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                 const SizedBox(height: 18),
               ],
 
-              // Submission notes (if pending)
+              // Submission content (if pending)
               if (!auth.isTeacher && a['status'] == 'pending') ...[
-                const Text('Submission Notes (optional)',
+                const Text('Upload Submission',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
                 const SizedBox(height: 8),
-                TextFormField(
-                  controller: notesCtrl,
-                  maxLines: 3, minLines: 2,
-                  decoration: InputDecoration(
-                    hintText: 'Add any notes for your teacher...',
-                    hintStyle: TextStyle(color: Colors.grey.shade400),
-                    filled: true, fillColor: AppColors.background,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.violet, width: 2)),
+                GestureDetector(
+                  onTap: () async {
+                    FilePickerResult? result = await FilePicker.platform.pickFiles();
+                    if (result != null) {
+                      setS(() => pickedFile = result.files.first);
+                    }
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    decoration: BoxDecoration(
+                      color: pickedFile != null ? AppColors.emerald.withOpacity(0.1) : AppColors.background,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: pickedFile != null ? AppColors.emerald : AppColors.border, 
+                        style: pickedFile != null ? BorderStyle.solid : BorderStyle.none
+                      ),
+                    ),
+                    child: Column(children: [
+                      Icon(
+                        pickedFile != null ? Icons.check_circle_rounded : Icons.cloud_upload_rounded,
+                        color: pickedFile != null ? AppColors.emerald : AppColors.violet,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        pickedFile != null ? pickedFile!.name : 'Tap to browse files',
+                        style: TextStyle(
+                          color: pickedFile != null ? AppColors.emerald : AppColors.textSecondary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ]),
                   ),
                 ),
                 const SizedBox(height: 16),
+              ],
+              
+              // Show submitted content if available
+              if (!auth.isTeacher && a['status'] != 'pending' && a['submissionContent'] != null && (a['submissionContent'] as String).isNotEmpty) ...[
+                const Text('Your Submission', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border)),
+                  child: Row(children: [
+                    const Icon(Icons.insert_drive_file_rounded, color: AppColors.violet, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(a['submissionContent'] as String,
+                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 18),
               ],
             ]),
           )),
@@ -206,11 +268,19 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> with SingleTicker
                 isLoading: submitting,
                 icon: Icons.upload_rounded,
                 onPressed: () async {
+                  if (pickedFile == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please select a file to submit'), backgroundColor: Colors.red)
+                    );
+                    return;
+                  }
                   setS(() => submitting = true);
                   try {
+                    // For now, we simulate an upload by sending the file name to the backend.
+                    final fileName = '[FILE] ${pickedFile!.name}';
                     final res = await ApiService.submitAssignment(
                       assignmentId: int.parse(a['id']),
-                      content: notesCtrl.text,
+                      content: fileName,
                     );
                     if (res['success'] == true) {
                       _load();

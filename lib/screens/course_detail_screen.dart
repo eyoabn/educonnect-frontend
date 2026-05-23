@@ -29,6 +29,8 @@ class CourseDetailScreen extends StatelessWidget {
     final studentTabs = [
       _Tab(icon: Icons.campaign_rounded,            label: 'Announcements',  gradient: AppGradients.orange,
            onTap: () => _push(context, AnnouncementsScreen(course: course))),
+      _Tab(icon: Icons.calendar_month_rounded,      label: 'Schedule',       gradient: AppGradients.cyan,
+           onTap: () => _push(context, ScheduleManagementScreen(course: course))),
       _Tab(icon: Icons.folder_open_rounded,         label: 'Materials',      gradient: AppGradients.cyan,
            onTap: () => _push(context, MaterialsScreen(course: course))),
       _Tab(icon: Icons.assignment_rounded,          label: 'Assignments',    gradient: AppGradients.orange,

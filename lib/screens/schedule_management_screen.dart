@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -251,8 +253,9 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
                     'room': _roomCtrl.text, 'type': _type, 'duration': _duration,
                   });
                 } catch (_) {}
+                if (!mounted) return;
                 setState(() {
-                  _schedules.add({
+                  _schedules = List.from(_schedules)..add({
                     'id': '${DateTime.now().millisecondsSinceEpoch}',
                     'time': _timeCtrl.text, 'day': _day,
                     'room': _roomCtrl.text, 'type': _type, 'duration': _duration,
@@ -291,8 +294,11 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
       ),
     );
     if (confirm != true) return;
-    try { await ApiService.deleteScheduleItem(widget.course.id, int.parse(id)); } catch (_) {}
-    setState(() => _schedules.removeWhere((s) => s['id'] == id));
+    try { await ApiService.deleteScheduleItem(widget.course.id, id); } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _schedules = List.from(_schedules)..removeWhere((s) => s['id'] == id);
+    });
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Schedule item removed'), backgroundColor: Colors.red));
   }
@@ -330,6 +336,7 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final grouped = _byDay;
+    final isTeacher = context.watch<AuthProvider>().isTeacher;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -347,22 +354,23 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
                   const Text('Schedule', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                   Text(widget.course.name, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
                 ])),
-                GestureDetector(
-                  onTap: _showAddSheet,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.4)),
+                if (isTeacher)
+                  GestureDetector(
+                    onTap: _showAddSheet,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withOpacity(0.4)),
+                      ),
+                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                        SizedBox(width: 6),
+                        Text('Add', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ]),
                     ),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.add_rounded, color: Colors.white, size: 18),
-                      SizedBox(width: 6),
-                      Text('Add', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ]),
                   ),
-                ),
               ]),
               const SizedBox(height: 16),
               Row(children: [
@@ -413,7 +421,7 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
                             ...items.map((s) => Padding(
                               padding: const EdgeInsets.only(bottom: 10),
                               child: _ScheduleCard(schedule: s, onDelete: () => _delete(s['id']),
-                                  gradient: _typeGradient(s['type']), icon: _typeIcon(s['type'])),
+                                  gradient: _typeGradient(s['type']), icon: _typeIcon(s['type']), isTeacher: isTeacher),
                             )),
                             const SizedBox(height: 8),
                           ]);
@@ -431,7 +439,8 @@ class _ScheduleCard extends StatelessWidget {
   final VoidCallback onDelete;
   final LinearGradient gradient;
   final IconData icon;
-  const _ScheduleCard({required this.schedule, required this.onDelete, required this.gradient, required this.icon});
+  final bool isTeacher;
+  const _ScheduleCard({required this.schedule, required this.onDelete, required this.gradient, required this.icon, required this.isTeacher});
 
   @override
   Widget build(BuildContext context) => GlassCard(
@@ -457,14 +466,15 @@ class _ScheduleCard extends StatelessWidget {
           Text('${schedule['duration']}min', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
         ]),
       ])),
-      GestureDetector(
-        onTap: onDelete,
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.red.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
-          child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+      if (isTeacher)
+        GestureDetector(
+          onTap: onDelete,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: Colors.red.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+          ),
         ),
-      ),
     ]),
   );
 }

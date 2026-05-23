@@ -195,6 +195,36 @@ class ApiService {
 
   // ═══ PROFILE ═══
 
+  static Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _loadToken();
+      if (_token == null) return {'success': false, 'message': 'Not authenticated'};
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/auth/change-password'),
+        headers: {
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['msg'] ?? 'Password updated successfully'};
+      }
+      return {'success': false, 'message': data['msg'] ?? 'Failed to change password'};
+    } catch (e) {
+      return {'success': false, 'message': 'Connection error: $e'};
+    }
+  }
+
   static Future<Map<String, dynamic>> getProfile() async {
     try {
       await _loadToken();
@@ -668,6 +698,7 @@ class ApiService {
     required String title,
     required String content,
     required String course,
+    String category = 'general',
   }) async {
     try {
       await _loadToken();
@@ -683,6 +714,7 @@ class ApiService {
           'title': title,
           'content': content,
           'course': course,
+          'category': category,
         }),
       ).timeout(const Duration(seconds: 10));
 
@@ -690,6 +722,63 @@ class ApiService {
         return {'success': true, 'announcement': jsonDecode(response.body)};
       }
       return {'success': false, 'message': 'Failed to create'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateAnnouncement({
+    required int announcementId,
+    required String title,
+    required String content,
+    String? category,
+  }) async {
+    try {
+      await _loadToken();
+      if (_token == null) return {'success': false};
+
+      final String realId = _announcementIdMap[announcementId] ?? announcementId.toString();
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/announcements/$realId'),
+        headers: {
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'title': title,
+          'content': content,
+          if (category != null) 'category': category,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'announcement': jsonDecode(response.body)};
+      }
+      return {'success': false, 'message': 'Failed to update'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> deleteAnnouncement({
+    required int announcementId,
+  }) async {
+    try {
+      await _loadToken();
+      if (_token == null) return {'success': false};
+
+      final String realId = _announcementIdMap[announcementId] ?? announcementId.toString();
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/announcements/$realId'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Announcement deleted'};
+      }
+      return {'success': false, 'message': 'Failed to delete'};
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -728,12 +817,13 @@ class ApiService {
             'id': mockId.toString(),
             'title': g['assignmentName'] as String? ?? 'Assignment',
             'course': g['course'] as String? ?? 'General Course',
-            'due': formattedDate,
+            'due': g['due'] as String? ?? formattedDate,
             'points': (g['maxGrade'] as num?)?.toInt() ?? 100,
             'status': g['status'] as String? ?? 'pending',
             'description': g['description'] as String? ?? '',
             'grade': (g['grade'] as num?)?.toInt(),
             'gi': mockId % 4,
+            'submissionContent': g['submissionContent'] as String? ?? '',
           };
         }).toList();
       }
@@ -790,6 +880,12 @@ class ApiService {
             'status': g['status'] as String? ?? 'pending',
             'grade': (g['grade'] as num?)?.toInt(),
             'feedback': g['feedback'] as String? ?? '',
+            'title': g['assignmentName'] as String? ?? 'Assignment',
+            'due': g['due'] as String? ?? formattedDate,
+            'points': (g['maxGrade'] as num?)?.toInt() ?? 100,
+            'description': g['description'] as String? ?? '',
+            'gi': mockId % 4,
+            'submissionContent': g['submissionContent'] as String? ?? '',
           };
         }).toList();
       }
@@ -1027,6 +1123,26 @@ class ApiService {
   }
 
   // ═══ Q&A FORUM ═══
+
+  static Future<List<Question>> getAllQuestions() async {
+    try {
+      await _loadToken();
+      if (_token == null) return [];
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/qa'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        return data.map((q) => Question.fromJson(q)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
 
   static Future<List<Question>> getQuestions(String courseId) async {
     try {
@@ -1381,7 +1497,7 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> deleteScheduleItem(String courseId, int id) async {
+  static Future<Map<String, dynamic>> deleteScheduleItem(String courseId, String id) async {
     try {
       await _loadToken();
       if (_token == null) return {'success': false};

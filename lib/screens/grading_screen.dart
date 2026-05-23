@@ -50,22 +50,20 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
           'status': s['status'] as String? ?? 'pending',
           'grade': s['grade'] as int?,
           'feedback': s['feedback'] as String? ?? '',
+          'submissionContent': s['submissionContent'] as String? ?? '',
         }).toList();
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() {
-        _submissions = [
-          {'id': '1', 'student': 'Alice Johnson',  'assignment': 'Math Project',      'time': '2 hours ago', 'status': 'pending', 'grade': null, 'feedback': '', 'gradientIndex': 0},
-          {'id': '2', 'student': 'Bob Smith',       'assignment': 'Math Project',      'time': '5 hours ago', 'status': 'pending', 'grade': null, 'feedback': '', 'gradientIndex': 1},
-          {'id': '3', 'student': 'Carol White',     'assignment': 'Lab Report',        'time': '1 day ago',   'status': 'graded',  'grade': 92,  'feedback': 'Great work! Well organized.', 'gradientIndex': 2},
-          {'id': '4', 'student': 'David Brown',     'assignment': 'Lab Report',        'time': '1 day ago',   'status': 'graded',  'grade': 85,  'feedback': 'Good effort. Focus on details.', 'gradientIndex': 3},
-          {'id': '5', 'student': 'Emma Wilson',     'assignment': 'Chapter Summary',   'time': '3 hours ago', 'status': 'pending', 'grade': null, 'feedback': '', 'gradientIndex': 0},
-          {'id': '6', 'student': 'Frank Davis',     'assignment': 'Chapter Summary',   'time': '6 hours ago', 'status': 'pending', 'grade': null, 'feedback': '', 'gradientIndex': 1},
-          {'id': '7', 'student': 'Grace Lee',       'assignment': 'Problem Set 4',     'time': '2 days ago',  'status': 'graded',  'grade': 78,  'feedback': 'Needs improvement on section 3.', 'gradientIndex': 2},
-        ];
-        _loading = false;
-      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _submissions = [];
+          _loading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load submissions: $e')),
+        );
+      }
     }
   }
 
@@ -119,6 +117,27 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
               ])),
             ]),
             const SizedBox(height: 24),
+
+            // Submission Content
+            if (_selected!['submissionContent'] != null && (_selected!['submissionContent'] as String).isNotEmpty) ...[
+              const Text('Submission Content', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border)),
+                child: Row(children: [
+                  const Icon(Icons.insert_drive_file_rounded, color: AppColors.violet, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(_selected!['submissionContent'] as String,
+                      style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 24),
+            ],
 
             // Grade slider
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [

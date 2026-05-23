@@ -60,11 +60,43 @@ class Announcement {
     required this.category, this.pinned = false, this.starred = false,
   });
 
-  factory Announcement.fromJson(Map<String, dynamic> j) => Announcement(
-    id: j['id'], author: j['author'], title: j['title'],
-    content: j['content'], timestamp: j['timestamp'], date: j['date'],
-    category: j['category'], pinned: j['pinned'] ?? false, starred: j['starred'] ?? false,
-  );
+  factory Announcement.fromJson(Map<String, dynamic> j) {
+    final authorObj = j['authorId'];
+    String authorName = 'Unknown';
+    if (authorObj is Map) {
+      authorName = authorObj['name']?.toString() ?? 'Unknown';
+    } else if (authorObj != null) {
+      authorName = authorObj.toString();
+    } else if (j['author'] != null) {
+      authorName = j['author'].toString();
+    }
+
+    String rawCreatedAt = j['createdAt']?.toString() ?? j['timestamp']?.toString() ?? '';
+    DateTime? dateParsed = rawCreatedAt.isNotEmpty ? DateTime.tryParse(rawCreatedAt) : null;
+    
+    String formattedTime = 'Recently';
+    String formattedDate = 'Recently';
+    if (dateParsed != null) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final monthName = months[dateParsed.month - 1];
+      formattedDate = '$monthName ${dateParsed.day}, ${dateParsed.year}';
+      final hour = dateParsed.hour.toString().padLeft(2, '0');
+      final minute = dateParsed.minute.toString().padLeft(2, '0');
+      formattedTime = '$formattedDate $hour:$minute';
+    }
+
+    return Announcement(
+      id: j['id'] is int ? j['id'] : (int.tryParse(j['id']?.toString() ?? '') ?? 0),
+      author: authorName,
+      title: j['title']?.toString() ?? '',
+      content: j['content']?.toString() ?? '',
+      timestamp: j['timestamp']?.toString() ?? formattedTime,
+      date: j['date']?.toString() ?? formattedDate,
+      category: j['category']?.toString() ?? 'general',
+      pinned: j['pinned'] ?? false,
+      starred: j['starred'] ?? false,
+    );
+  }
 }
 
 class StudyMaterial {
