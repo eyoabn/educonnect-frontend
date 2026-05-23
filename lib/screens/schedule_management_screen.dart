@@ -68,7 +68,8 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
   }
 
   void _showAddSheet() {
-    _timeCtrl.clear(); _roomCtrl.clear();
+    _timeCtrl.text = '09:00 AM';
+    _roomCtrl.clear();
     _type = 'Lecture'; _day = 'Monday'; _duration = 60;
 
     showModalBottomSheet(
@@ -234,9 +235,14 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
               gradient: AppGradients.cyan,
               icon: Icons.add_rounded,
               onPressed: () async {
-                if (_timeCtrl.text.isEmpty || _roomCtrl.text.isEmpty) {
+                if (_timeCtrl.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please fill in time and room')));
+                      const SnackBar(content: Text('Please select a time')));
+                  return;
+                }
+                if (_roomCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter a room')));
                   return;
                 }
                 try {
