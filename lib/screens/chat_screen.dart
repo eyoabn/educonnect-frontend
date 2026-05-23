@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -51,16 +52,26 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loading = true;
   ChatContact? _selected;
   final _searchCtrl = TextEditingController();
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadContacts();
+    _startPolling();
     _searchCtrl.addListener(_filter);
   }
 
   @override
-  void dispose() { _searchCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _pollTimer?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) => _pollContacts());
+  }
 
   Future<void> _loadContacts() async {
     try {
@@ -84,6 +95,42 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _pollContacts() async {
+    try {
+      final data = await ApiService.getContacts();
+      final newContacts = data.map((c) => ChatContact(
+        id: c['id']?.toString() ?? '',
+        name: c['name'] as String? ?? 'Unknown',
+        role: c['role'] as String? ?? '',
+        avatar: c['avatar'] as String? ?? '?',
+        online: c['online'] as bool? ?? false,
+        unread: (c['unread'] as num?)?.toInt() ?? 0,
+        lastMessage: c['lastMessage'] as String? ?? '',
+        gradientIndex: (c['gradientIndex'] as num?)?.toInt() ?? 0,
+      )).toList();
+
+      if (mounted && !_areContactsEqual(_contacts, newContacts)) {
+        setState(() {
+          _contacts = newContacts;
+          _filter();
+        });
+      }
+    } catch (_) {}
+  }
+
+  bool _areContactsEqual(List<ChatContact> list1, List<ChatContact> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i].id != list2[i].id ||
+          list1[i].lastMessage != list2[i].lastMessage ||
+          list1[i].unread != list2[i].unread ||
+          list1[i].online != list2[i].online) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void _filter() {
     final q = _searchCtrl.text.toLowerCase();
     setState(() => _filtered = q.isEmpty ? _contacts
@@ -93,7 +140,10 @@ class _ChatScreenState extends State<ChatScreen> {
   void _openConversation(ChatContact contact) {
     // Clear unread badge
     setState(() { contact.unread = 0; });
-    Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationScreen(contact: contact)));
+    ApiService.markChatAsRead(contact.id);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationScreen(contact: contact))).then((_) {
+      _loadContacts();
+    });
   }
 
   @override
@@ -205,15 +255,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _sending = false;
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadMessages();
+    _startPolling();
   }
 
   @override
-  void dispose() { _msgCtrl.dispose(); _scrollCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _pollTimer?.cancel();
+    _msgCtrl.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollMessages());
+  }
 
   Future<void> _loadMessages() async {
     try {
@@ -225,10 +286,46 @@ class _ConversationScreenState extends State<ConversationScreen> {
         time: m['time'] as String? ?? '',
         isSelf: m['isSelf'] as bool? ?? false,
       )).toList(); _loading = false; });
+      _scrollToBottom();
+      ApiService.markChatAsRead(widget.contact.id);
     } catch (_) {
       if (mounted) setState(() { _messages = List.from(_mockMessages[widget.contact.id] ?? []); _loading = false; });
+      _scrollToBottom();
     }
-    _scrollToBottom();
+  }
+
+  Future<void> _pollMessages() async {
+    if (_sending) return;
+    try {
+      final msgs = await ApiService.getMessages(widget.contact.id);
+      final newMessages = msgs.map((m) => ChatMessage(
+        id: (m['id'] as num?)?.toInt() ?? 0,
+        sender: m['sender'] as String? ?? 'Unknown',
+        content: m['content'] as String? ?? '',
+        time: m['time'] as String? ?? '',
+        isSelf: m['isSelf'] as bool? ?? false,
+      )).toList();
+
+      if (mounted && !_areMessagesEqual(_messages, newMessages)) {
+        setState(() {
+          _messages = newMessages;
+        });
+        _scrollToBottom();
+        ApiService.markChatAsRead(widget.contact.id);
+      }
+    } catch (_) {}
+  }
+
+  bool _areMessagesEqual(List<ChatMessage> list1, List<ChatMessage> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i].id != list2[i].id ||
+          list1[i].content != list2[i].content ||
+          list1[i].time != list2[i].time) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _scrollToBottom() {
@@ -267,6 +364,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         _sending = false;
         widget.contact.lastMessage = text;
       });
+      _pollMessages();
     } catch (_) {
       if (mounted) setState(() => _sending = false);
     }

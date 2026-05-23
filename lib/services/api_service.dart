@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../models/models.dart';
 
 class ApiService {
@@ -1179,63 +1180,17 @@ class ApiService {
       if (_token == null) return [];
 
       final response = await http.get(
-        Uri.parse('$baseUrl/chat/conversations'),
+        Uri.parse('$baseUrl/chat/contacts'),
         headers: {'Authorization': 'Bearer $_token'},
       ).timeout(const Duration(seconds: 10));
 
-      final Map<String, Map<String, dynamic>> contactsMap = {};
-
       if (response.statusCode == 200) {
-        final List<dynamic> conversations = jsonDecode(response.body);
-
-        for (var msg in conversations) {
-          final sender = msg['senderId'];
-          final receiver = msg['receiverId'];
-          if (sender == null || receiver == null) continue;
-
-          final isSender = sender['_id'] == currentUserId;
-          final otherUser = isSender ? receiver : sender;
-          final otherId = otherUser['_id']?.toString() ?? '';
-
-          if (otherId.isEmpty || contactsMap.containsKey(otherId)) continue;
-
-          String name = otherUser['name'] ?? 'Unknown';
-          String initials = name.split(' ').map((w) => w.isEmpty ? '' : w[0]).take(2).join().toUpperCase();
-
-          contactsMap[otherId] = {
-            'id': otherId,
-            'name': name,
-            'role': otherUser['role'] ?? 'User',
-            'avatar': initials,
-            'online': true,
-            'unread': msg['read'] == false && !isSender ? 1 : 0,
-            'lastMessage': msg['text'] ?? '',
-            'gradientIndex': otherId.hashCode.abs() % 4,
-          };
-        }
+        final List<dynamic> data = jsonDecode(response.body);
+        return List<Map<String, dynamic>>.from(data);
       }
-
-      // Add teachers from courses for students
-      final courses = await getCourses();
-      for (var c in courses) {
-        final tId = c['teacherId'] as String? ?? '';
-        if (tId.isNotEmpty && tId != currentUserId && !contactsMap.containsKey(tId)) {
-          final tName = c['teacher'] as String? ?? 'Teacher';
-          contactsMap[tId] = {
-            'id': tId,
-            'name': tName,
-            'role': 'Teacher',
-            'avatar': tName.split(' ').map((w) => w.isEmpty ? '' : w[0]).take(2).join().toUpperCase(),
-            'online': false,
-            'unread': 0,
-            'lastMessage': 'Start a conversation',
-            'gradientIndex': tId.hashCode.abs() % 4,
-          };
-        }
-      }
-
-      return contactsMap.values.toList();
+      return [];
     } catch (e) {
+      print('Error in getContacts: $e');
       return [];
     }
   }
@@ -1245,28 +1200,39 @@ class ApiService {
       await _loadToken();
       if (_token == null) return [];
 
-      final conversationId = _getConversationId(currentUserId, receiverId);
-
       final response = await http.get(
-        Uri.parse('$baseUrl/chat/conversation/$conversationId'),
+        Uri.parse('$baseUrl/chat/messages/$receiverId'),
         headers: {'Authorization': 'Bearer $_token'},
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
-        return data.reversed.map((m) {
+        return data.map((m) {
           final senderId = m['senderId'] != null ? m['senderId']['_id']?.toString() : null;
+          String timeStr = 'Just now';
+          if (m['timestamp'] != null) {
+            try {
+              final parsed = DateTime.parse(m['timestamp'].toString()).toLocal();
+              timeStr = DateFormat('hh:mm a').format(parsed);
+            } catch (_) {}
+          } else if (m['createdAt'] != null) {
+            try {
+              final parsed = DateTime.parse(m['createdAt'].toString()).toLocal();
+              timeStr = DateFormat('hh:mm a').format(parsed);
+            } catch (_) {}
+          }
           return {
             'id': m['_id']?.hashCode.abs() ?? 0,
             'sender': m['senderId'] != null ? m['senderId']['name'] ?? 'Unknown' : 'Unknown',
             'content': m['text'] ?? '',
-            'time': 'Just now',
+            'time': timeStr,
             'isSelf': senderId == currentUserId,
           };
         }).toList();
       }
       return [];
     } catch (e) {
+      print('Error in getMessages: $e');
       return [];
     }
   }
@@ -1279,8 +1245,6 @@ class ApiService {
       await _loadToken();
       if (_token == null) return {'success': false};
 
-      final conversationId = _getConversationId(currentUserId, receiverId);
-
       final response = await http.post(
         Uri.parse('$baseUrl/chat/send'),
         headers: {
@@ -1289,7 +1253,6 @@ class ApiService {
         },
         body: jsonEncode({
           'receiverId': receiverId,
-          'conversationId': conversationId,
           'text': text,
         }),
       ).timeout(const Duration(seconds: 10));
@@ -1300,6 +1263,24 @@ class ApiService {
       throw Exception('Failed to send message: ${response.body}');
     } catch (e) {
       throw Exception('Error sending message: $e');
+    }
+  }
+
+  static Future<bool> markChatAsRead(String otherUserId) async {
+    try {
+      await _loadToken();
+      if (_token == null) return false;
+
+      final conversationId = _getConversationId(currentUserId, otherUserId);
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/chat/read/$conversationId'),
+        headers: {'Authorization': 'Bearer $_token'},
+      ).timeout(const Duration(seconds: 10));
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 

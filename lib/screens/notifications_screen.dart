@@ -84,11 +84,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: Column(
         children: [
           GradientHeader(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF7C3AED), Color(0xFFD946EF), Color(0xFFF97316)],
-            ),
+            gradient: AppGradients.violet,
             child: SafeArea(
               bottom: false,
               child: Padding(
