@@ -88,7 +88,7 @@ class _QAScreenState extends State<QAScreen> {
       body: Column(
         children: [
           GradientHeader(
-            gradient: AppGradients.cyan,
+            gradient: AppGradients.primary,
             child: SafeArea(
               bottom: false,
               child: Padding(

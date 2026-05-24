@@ -25,7 +25,7 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl = TabController(length: 3, vsync: this);
     _loadSubmissions();
   }
 
@@ -42,7 +42,7 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
       final data = await ApiService.getSubmissions(widget.course?.id ?? '');
       if (mounted) setState(() {
         _submissions = data.map((s) => {
-          'id': (s['_id'] ?? s['id'] ?? 'unknown').toString(),
+          'id': s['id']?.toString() ?? 'unknown',
           'student': s['student'] as String? ?? 'Unknown',
           'assignment': s['assignment'] as String? ?? 'Unknown Assignment',
           'course': s['course']?.toString() ?? '',
@@ -68,8 +68,12 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
     }
   }
 
-  List<Map<String, dynamic>> get _pending => _submissions.where((s) => s['status'] == 'pending' || s['status'] == 'submitted').toList();
-  List<Map<String, dynamic>> get _graded  => _submissions.where((s) => s['status'] == 'graded').toList();
+  // Students who have submitted their answer — teacher needs to grade these
+  List<Map<String, dynamic>> get _submitted => _submissions.where((s) => s['status'] == 'submitted').toList();
+  // Students who haven't submitted yet
+  List<Map<String, dynamic>> get _awaiting  => _submissions.where((s) => s['status'] == 'pending').toList();
+  // Already graded
+  List<Map<String, dynamic>> get _graded    => _submissions.where((s) => s['status'] == 'graded').toList();
 
   void _openGrading(Map<String, dynamic> sub) {
     setState(() {
@@ -304,8 +308,9 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final pending = _pending;
-    final graded  = _graded;
+    final submitted = _submitted;
+    final awaiting  = _awaiting;
+    final graded    = _graded;
     final avg = graded.isEmpty ? 0
         : (graded.fold(0, (s, g) => s + (g['grade'] as int? ?? 0)) / graded.length).round();
 
@@ -314,7 +319,7 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
       body: Column(children: [
         // ── Header ─────────────────────────────────────────────────────────
         GradientHeader(
-          gradient: AppGradients.fuchsia,
+          gradient: AppGradients.primary,
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -339,11 +344,11 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
               const SizedBox(height: 16),
               // Stats
               Row(children: [
-                Expanded(child: _HeaderStat(label: 'Pending', value: '${pending.length}', gradient: AppGradients.orange)),
+                Expanded(child: _HeaderStat(label: 'Submitted', value: '${submitted.length}', gradient: AppGradients.orange)),
                 const SizedBox(width: 10),
-                Expanded(child: _HeaderStat(label: 'Graded',  value: '${graded.length}',  gradient: AppGradients.emerald)),
+                Expanded(child: _HeaderStat(label: 'Awaiting',  value: '${awaiting.length}',  gradient: AppGradients.cyan)),
                 const SizedBox(width: 10),
-                Expanded(child: _HeaderStat(label: 'Avg Grade', value: graded.isEmpty ? '—' : '$avg%', gradient: AppGradients.violet)),
+                Expanded(child: _HeaderStat(label: 'Graded',    value: '${graded.length}',    gradient: AppGradients.emerald)),
               ]),
             ]),
           )),
@@ -356,11 +361,12 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
             controller: _tabCtrl,
             labelColor: AppColors.violet,
             unselectedLabelColor: AppColors.textSecondary,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             indicatorColor: AppColors.violet,
             indicatorWeight: 3,
             tabs: [
-              Tab(text: 'Pending (${pending.length})'),
+              Tab(text: 'Submitted (${submitted.length})'),
+              Tab(text: 'Awaiting (${awaiting.length})'),
               Tab(text: 'Graded (${graded.length})'),
             ],
           ),
@@ -371,28 +377,53 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : TabBarView(controller: _tabCtrl, children: [
-                  // Pending tab
-                  pending.isEmpty
-                      ? const EmptyState(icon: Icons.check_circle_rounded,
-                          title: 'All caught up!', subtitle: 'No pending submissions',
+
+                  // ── Submitted tab: students have answered, teacher needs to grade ──
+                  submitted.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.hourglass_empty_rounded,
+                          title: 'No submissions yet',
+                          subtitle: 'Students who submit their answers will appear here',
+                          gradient: AppGradients.orange)
+                      : RefreshIndicator(
+                          onRefresh: _loadSubmissions,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: submitted.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (_, i) => _SubmissionCard(
+                              submission: submitted[i],
+                              onGrade: () => _openGrading(submitted[i]),
+                            ),
+                          ),
+                        ),
+
+                  // ── Awaiting tab: students who haven't submitted yet ──
+                  awaiting.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.check_circle_rounded,
+                          title: 'All submitted!',
+                          subtitle: 'Every student has submitted their answer',
                           gradient: AppGradients.emerald)
                       : RefreshIndicator(
                           onRefresh: _loadSubmissions,
                           child: ListView.separated(
                             padding: const EdgeInsets.all(16),
-                            itemCount: pending.length,
+                            itemCount: awaiting.length,
                             separatorBuilder: (_, __) => const SizedBox(height: 10),
                             itemBuilder: (_, i) => _SubmissionCard(
-                              submission: pending[i],
-                              onGrade: () => _openGrading(pending[i]),
+                              submission: awaiting[i],
+                              onGrade: () => _openGrading(awaiting[i]),
                             ),
                           ),
                         ),
 
-                  // Graded tab
+                  // ── Graded tab ──
                   graded.isEmpty
-                      ? const EmptyState(icon: Icons.assignment_rounded,
-                          title: 'No graded work', subtitle: 'Grade a submission first')
+                      ? const EmptyState(
+                          icon: Icons.assignment_rounded,
+                          title: 'No graded work',
+                          subtitle: 'Grade a submission first')
                       : RefreshIndicator(
                           onRefresh: _loadSubmissions,
                           child: ListView.separated(

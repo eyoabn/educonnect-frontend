@@ -15,23 +15,12 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _titleCtrl   = TextEditingController();
   final _contentCtrl = TextEditingController();
-  final _formKey     = GlobalKey<FormState>();
-  String _category   = 'general';
-  bool   _isPinned   = false;
   bool   _isLoading  = false;
   bool   _loadingCourses = true;
   String? _loadError;
   
   List<Map<String, dynamic>> _courses = [];
   Map<String, dynamic>? _selectedCourse;
-
-  static const _categories = [
-    {'value': 'general',    'label': 'General',    'icon': Icons.info_outline_rounded},
-    {'value': 'assignment', 'label': 'Assignment',  'icon': Icons.assignment_rounded},
-    {'value': 'grade',      'label': 'Grade',       'icon': Icons.grade_rounded},
-    {'value': 'resource',   'label': 'Resource',    'icon': Icons.folder_rounded},
-    {'value': 'important',  'label': 'Important',   'icon': Icons.priority_high_rounded},
-  ];
 
   @override
   void initState() {
@@ -111,10 +100,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           SnackBar(content: Text(result['message'] ?? 'Failed to publish post'), backgroundColor: Colors.red),
         );
       }
-    } catch (e, st) {
+    } catch (e) {
       // Log and surface network/timeout/errors
       // ignore: avoid_print
-      print('Publish error: $e\n$st');
+      print('Publish error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error publishing post: $e'), backgroundColor: Colors.red),
@@ -233,7 +222,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           ]),
         ),
       );
-    } catch (e, st) {
+    } catch (e) {
       // Show error scaffold instead of blank white page
       return Scaffold(
         backgroundColor: AppColors.background,

@@ -355,10 +355,7 @@ class ApiService {
             'teacherId': teacher is Map ? (teacher['_id']?.toString() ?? teacher['id']?.toString()) : null,
             'teacherName': teacher is Map ? (teacher['name'] ?? teacher['email'] ?? null) : (teacher?.toString()),
             'studentIds': students.map((s) {
-              if (s is Map) {
-                return (s['_id'] ?? s['id'] ?? '').toString();
-              }
-              return s.toString();
+              return (s['_id'] ?? s['id'] ?? '').toString();
             }).where((v) => v.isNotEmpty).toList(),
           };
         }).toList();

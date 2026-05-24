@@ -51,8 +51,8 @@ class CourseDetailScreen extends StatelessWidget {
            onTap: () => _push(context, const CreatePostScreen())),
       _Tab(icon: Icons.folder_open_rounded,         label: 'Materials',      gradient: AppGradients.cyan,
            onTap: () => _push(context, MaterialsScreen(course: course))),
-      _Tab(icon: Icons.assignment_turned_in_rounded,label: 'Grade Work',     gradient: AppGradients.fuchsia,
-           onTap: () => _push(context, GradingScreen(course: course))),
+      _Tab(icon: Icons.assignment_rounded,          label: 'Assignments',    gradient: AppGradients.orange,
+           onTap: () => _push(context, AssignmentsScreen(course: course))),
       _Tab(icon: Icons.people_rounded,              label: 'Students',       gradient: AppGradients.emerald,
            onTap: () => _push(context, StudentListScreen(course: course))),
       _Tab(icon: Icons.calendar_month_rounded,      label: 'Schedule',       gradient: AppGradients.cyan,
@@ -71,7 +71,7 @@ class CourseDetailScreen extends StatelessWidget {
         // ── Header ──────────────────────────────────────────────────────
         SliverToBoxAdapter(
           child: GradientHeader(
-            gradient: grad,
+            gradient: AppGradients.primary,
             child: SafeArea(bottom: false, child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

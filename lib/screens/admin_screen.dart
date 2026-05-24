@@ -438,7 +438,7 @@ class _AdminScreenState extends State<AdminScreen>
           children: [
             // Header and Tab bar (not scrollable)
             GradientHeader(
-              gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF1E40AF), Color(0xFF1E1B4B)]),
+              gradient: AppGradients.primary,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

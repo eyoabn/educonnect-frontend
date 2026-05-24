@@ -278,7 +278,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
       body: Column(children: [
         // Header
         GradientHeader(
-          gradient: AppGradients.emerald,
+          gradient: AppGradients.primary,
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

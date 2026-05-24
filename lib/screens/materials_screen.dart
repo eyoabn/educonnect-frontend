@@ -219,11 +219,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
     );
   }
 
-  String _todayDate() {
-    final now = DateTime.now();
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${months[now.month - 1]} ${now.day}, ${now.year}';
-  }
+
 
   // Stats
   int get _totalCount => _all.length;
@@ -239,7 +235,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
       body: Column(children: [
         // ── Header ───────────────────────────────────────────────────────
         GradientHeader(
-          gradient: AppGradients.cyan,
+          gradient: AppGradients.primary,
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

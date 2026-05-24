@@ -77,7 +77,7 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
       backgroundColor: AppColors.background,
       body: Column(children: [
         GradientHeader(
-          gradient: AppGradients.purple,
+          gradient: AppGradients.primary,
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

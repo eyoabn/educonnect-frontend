@@ -5,9 +5,7 @@ import '../theme/app_theme.dart';
 import 'admin_screen.dart';          // ← NEW
 import 'dashboard_screen.dart';
 import 'chat_screen.dart';
-import 'grading_screen.dart';
 import 'search_screen.dart';
-import 'student_list_screen.dart';
 import 'notifications_screen.dart';
 import 'profile_screen.dart';
 

@@ -212,7 +212,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
       body: Column(
         children: [
           GradientHeader(
-            gradient: AppGradients.orange,
+            gradient: AppGradients.primary,
             child: SafeArea(
               bottom: false,
               child: Padding(

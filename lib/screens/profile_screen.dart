@@ -826,7 +826,7 @@ class _ActivityTabState extends State<_ActivityTab> {
           'course': courseName,
           'time': _fmt(ann['createdAt']?.toString()),
           'gi': items.length % 4,
-          'iconCode': Icons.campaign_rounded.codePoint,
+          'icon': Icons.campaign_rounded,
         });
       }
 
@@ -841,7 +841,7 @@ class _ActivityTabState extends State<_ActivityTab> {
               'course': g['course']?.toString() ?? 'Course',
               'time': _fmt(g['submittedDate']?.toString() ?? g['createdAt']?.toString()),
               'gi': items.length % 4,
-              'iconCode': Icons.assignment_turned_in_rounded.codePoint,
+              'icon': Icons.assignment_turned_in_rounded,
             });
           }
         }
@@ -898,7 +898,7 @@ class _ActivityTabState extends State<_ActivityTab> {
           child: Row(children: [
             GradientIconBox(
               gradient: AppGradients.courseGradients[(a['gi'] as int) % 4],
-              icon: IconData(a['iconCode'] as int, fontFamily: 'MaterialIcons'),
+              icon: a['icon'] as IconData,
               size: 42,
               iconSize: 20,
             ),

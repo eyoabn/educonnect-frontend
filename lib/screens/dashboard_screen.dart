@@ -48,10 +48,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         for (var ann in courseAnnouncements) {
           // Extract author name from populated authorId object
           String authorName = 'Unknown';
-          if (ann is Map && ann['authorId'] is Map) {
-            authorName = ann['authorId']['name'] ?? 'Unknown';
-          } else if (ann is Map && ann['author'] is String) {
-            authorName = ann['author'];
+          if (ann['authorId'] is Map) {
+            authorName = (ann['authorId'] as Map)['name'] as String? ?? 'Unknown';
+          } else if (ann['author'] is String) {
+            authorName = ann['author'] as String;
           }
 
           allAnnouncements.add(Announcement(

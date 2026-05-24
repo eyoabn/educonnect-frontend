@@ -84,7 +84,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       body: Column(
         children: [
           GradientHeader(
-            gradient: AppGradients.violet,
+            gradient: AppGradients.primary,
             child: SafeArea(
               bottom: false,
               child: Padding(

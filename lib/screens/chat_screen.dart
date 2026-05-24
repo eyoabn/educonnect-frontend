@@ -122,7 +122,7 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: AppColors.background,
       body: Column(children: [
         GradientHeader(
-          gradient: AppGradients.violet,
+          gradient: AppGradients.primary,
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -346,7 +346,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       body: Column(children: [
         // ── Header ──
         GradientHeader(
-          gradient: AppGradients.violet,
+          gradient: AppGradients.primary,
           child: SafeArea(bottom: false, child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
             child: Row(children: [
