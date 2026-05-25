@@ -45,7 +45,8 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
     setState(() => _loading = true);
     try {
       final data = await ApiService.getSchedule(courseId: widget.course.id);
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _schedules = data.map((s) => {
           'id': (s['_id'] ?? s['id'] ?? 'unknown').toString(),
           'time': s['time'] as String? ?? '09:00 AM',
@@ -56,8 +57,10 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
         }).toList();
         _loading = false;
       });
+      }
     } catch (_) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _schedules = [
           {'id': '1', 'time': '09:00 AM', 'day': 'Monday',    'room': 'Room 101', 'type': 'Lecture',     'duration': 60},
           {'id': '2', 'time': '11:00 AM', 'day': 'Tuesday',   'room': 'Lab A',    'type': 'Lab',         'duration': 90},
@@ -66,6 +69,7 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
         ];
         _loading = false;
       });
+      }
     }
   }
 
@@ -90,10 +94,10 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
             Center(child: Container(width: 40, height: 4,
                 decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 20),
-            Row(children: [
+            const Row(children: [
               GradientIconBox(gradient: AppGradients.cyan, icon: Icons.event_rounded, size: 42, iconSize: 20),
-              const SizedBox(width: 12),
-              const Text('Add Schedule Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              SizedBox(width: 12),
+              Text('Add Schedule Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             ]),
             const SizedBox(height: 22),
 
@@ -136,7 +140,7 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
                   context: context,
                   initialTime: TimeOfDay.now(),
                   builder: (ctx, child) => Theme(
-                    data: Theme.of(ctx).copyWith(colorScheme: ColorScheme.light(primary: AppColors.cyan)),
+                    data: Theme.of(ctx).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.cyan)),
                     child: child!,
                   ),
                 );
@@ -172,8 +176,8 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
                 hintText: 'e.g. Room 101, Lab A',
                 prefixIcon: const Icon(Icons.location_on_rounded, color: AppColors.cyan, size: 20),
                 filled: true, fillColor: AppColors.background,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppColors.border)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.cyan, width: 2)),
               ),
             ),
@@ -299,8 +303,10 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
     setState(() {
       _schedules = List.from(_schedules)..removeWhere((s) => s['id'] == id);
     });
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Schedule item removed'), backgroundColor: Colors.red));
+    }
   }
 
   LinearGradient _typeGradient(String type) {
@@ -348,7 +354,7 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                AppBackButton(),
+                const AppBackButton(),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('Schedule', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
@@ -387,7 +393,7 @@ class _ScheduleManagementScreenState extends State<ScheduleManagementScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _schedules.isEmpty
-                  ? EmptyState(
+                  ? const EmptyState(
                       icon: Icons.calendar_month_rounded,
                       title: 'No schedule yet',
                       subtitle: 'Tap "Add" to create your first class slot',

@@ -44,7 +44,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadContacts() async {
     try {
       final data = await ApiService.getContacts();
-      if (mounted) setState(() { 
+      if (mounted) {
+        setState(() { 
         _contacts = data.map((c) => ChatContact(
           id: c['id']?.toString() ?? '',
           name: c['name'] as String? ?? 'Unknown',
@@ -57,7 +58,8 @@ class _ChatScreenState extends State<ChatScreen> {
         )).toList(); 
         _filtered = _contacts; 
         _loading = false; 
-      }); 
+      });
+      } 
     } catch (_) {
       if (mounted) setState(() { _contacts = []; _filtered = []; _loading = false; });
     }
@@ -212,7 +214,7 @@ class _ContactTile extends StatelessWidget {
 // ── Conversation Screen ───────────────────────────────────────────────────────
 class ConversationScreen extends StatefulWidget {
   final ChatContact contact;
-  const ConversationScreen({required this.contact});
+  const ConversationScreen({super.key, required this.contact});
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
 }
@@ -247,13 +249,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Future<void> _loadMessages() async {
     try {
       final msgs = await ApiService.getMessages(widget.contact.id);
-      if (mounted) setState(() { _messages = msgs.map((m) => ChatMessage(
+      if (mounted) {
+        setState(() { _messages = msgs.map((m) => ChatMessage(
         id: (m['id'] as num?)?.toInt() ?? 0,
         sender: m['sender'] as String? ?? 'Unknown',
         content: m['content'] as String? ?? '',
         time: m['time'] as String? ?? '',
         isSelf: m['isSelf'] as bool? ?? false,
       )).toList(); _loading = false; });
+      }
       _scrollToBottom();
       ApiService.markChatAsRead(widget.contact.id);
     } catch (_) {
@@ -325,12 +329,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
         text: text,
       );
       // Mark as sent
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         final idx = _messages.indexOf(msg);
         if (idx >= 0) _messages[idx] = ChatMessage(id: msg.id, sender: msg.sender, content: msg.content, time: msg.time, isSelf: true, status: MessageStatus.sent);
         _sending = false;
         widget.contact.lastMessage = text;
       });
+      }
       _pollMessages();
     } catch (_) {
       if (mounted) setState(() => _sending = false);
@@ -373,11 +379,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 Text(contact.online ? '● Online' : '● Offline',
                     style: TextStyle(color: contact.online ? Colors.green.shade300 : Colors.white.withOpacity(0.6), fontSize: 11)),
               ])),
-              Row(children: [
+              const Row(children: [
                 _HeaderBtn(icon: Icons.call_rounded),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 _HeaderBtn(icon: Icons.videocam_rounded),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 _HeaderBtn(icon: Icons.more_vert_rounded),
               ]),
             ]),
@@ -403,7 +409,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
-            border: Border(top: BorderSide(color: AppColors.border)),
+            border: const Border(top: BorderSide(color: AppColors.border)),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))],
           ),
           child: SafeArea(top: false, child: Row(children: [

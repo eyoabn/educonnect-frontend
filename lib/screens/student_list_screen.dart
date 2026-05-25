@@ -111,10 +111,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
     }
     // For filters, treat avg=-1 (ungraded) as 0
     if (_filterIndex == 1) list = list.where((s) => (s['avg'] as int) >= 85).toList();
-    if (_filterIndex == 2) list = list.where((s) {
+    if (_filterIndex == 2) {
+      list = list.where((s) {
       final a = s['avg'] as int;
       return a >= 0 && a < 65;
     }).toList();
+    }
     return list;
   }
 
@@ -283,7 +285,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                AppBackButton(),
+                const AppBackButton(),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('Students', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),

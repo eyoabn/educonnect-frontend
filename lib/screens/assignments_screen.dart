@@ -162,14 +162,14 @@ class _AssignmentsScreenState extends State<AssignmentsScreen>
                               color: Colors.grey.shade300,
                               borderRadius: BorderRadius.circular(2)))),
                   const SizedBox(height: 20),
-                  Row(children: [
+                  const Row(children: [
                     GradientIconBox(
                         gradient: AppGradients.orange,
                         icon: Icons.add_task_rounded,
                         size: 42,
                         iconSize: 20),
-                    const SizedBox(width: 12),
-                    const Text('Create Assignment',
+                    SizedBox(width: 12),
+                    Text('Create Assignment',
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -382,7 +382,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(children: [
-                        AppBackButton(),
+                        const AppBackButton(),
                         const SizedBox(width: 12),
                         Expanded(
                             child: Column(
@@ -624,7 +624,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(children: [
-                        AppBackButton(),
+                        const AppBackButton(),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -702,7 +702,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                   const SizedBox(height: 20),
 
                   // ── Description ──────────────────────────────────────
-                  _SectionTitle(title: 'Assignment Description'),
+                  const _SectionTitle(title: 'Assignment Description'),
                   const SizedBox(height: 10),
                   Container(
                     width: double.infinity,
@@ -731,7 +731,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
 
                   // ── Teacher Attachment ───────────────────────────────
                   if ((a['attachmentUrl'] as String? ?? '').isNotEmpty) ...[
-                    _SectionTitle(title: 'Assignment File'),
+                    const _SectionTitle(title: 'Assignment File'),
                     const SizedBox(height: 10),
                     GestureDetector(
                       onTap: () => _safeLaunchUrl(
@@ -783,7 +783,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
 
                   // ── Grade box (if graded) ────────────────────────────
                   if (isGraded && a['grade'] != null) ...[
-                    _SectionTitle(title: 'Your Grade'),
+                    const _SectionTitle(title: 'Your Grade'),
                     const SizedBox(height: 10),
                     Container(
                       width: double.infinity,
@@ -1409,7 +1409,7 @@ class _TeacherSubmissionsScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  AppBackButton(),
+                  const AppBackButton(),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

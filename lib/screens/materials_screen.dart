@@ -157,8 +157,10 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
         _all.removeWhere((m) => m.id == material.id);
         _applyFilter();
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Material deleted'), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -175,8 +177,10 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
             fileUrl: url.isNotEmpty ? url : 'https://example.com/updated_file',
           );
           _load();
-          if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${material.name} updated to v${material.version + 1}!'), backgroundColor: Colors.green));
+          }
         },
       ),
     );
@@ -240,7 +244,7 @@ class _MaterialsScreenState extends State<MaterialsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                AppBackButton(),
+                const AppBackButton(),
                 const Spacer(),
                 if (isTeacher)
                   GestureDetector(
@@ -392,7 +396,7 @@ class _MaterialCard extends StatelessWidget {
             InfoChip(label: material.type, color: _typeColor),
             if (material.downloaded) ...[
               const SizedBox(width: 6),
-              InfoChip(label: 'Downloaded', color: Colors.green),
+              const InfoChip(label: 'Downloaded', color: Colors.green),
             ],
           ]),
         ])),

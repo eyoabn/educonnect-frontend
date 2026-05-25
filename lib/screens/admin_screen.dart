@@ -340,21 +340,25 @@ class _AdminScreenState extends State<AdminScreen>
       if (result['success'] == true) {
         setState(() {
           final index = _teachers.indexWhere((u) => u.id == user.id);
-          if (index >= 0) _teachers[index] = AdminUser(
+          if (index >= 0) {
+            _teachers[index] = AdminUser(
             id: user.id,
             name: user.name,
             email: user.email,
             role: user.role,
             approved: true,
           );
+          }
           final studentIndex = _students.indexWhere((u) => u.id == user.id);
-          if (studentIndex >= 0) _students[studentIndex] = AdminUser(
+          if (studentIndex >= 0) {
+            _students[studentIndex] = AdminUser(
             id: user.id,
             name: user.name,
             email: user.email,
             role: user.role,
             approved: true,
           );
+          }
         });
         _showSnack('${user.name} approved successfully', Colors.green);
       } else {
@@ -1432,7 +1436,7 @@ class _PostsTabState extends State<_PostsTab> {
       // ── Posts list ──────────────────────────────────────────────────────
       Expanded(
         child: filtered.isEmpty
-            ? _Empty(icon: Icons.article_rounded, label: 'No posts found')
+            ? const _Empty(icon: Icons.article_rounded, label: 'No posts found')
             : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 itemCount: filtered.length,

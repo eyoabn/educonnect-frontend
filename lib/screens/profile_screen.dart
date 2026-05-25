@@ -131,8 +131,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final studentStats = [
       _StatData(icon: Icons.menu_book_rounded, label: 'Courses', value: _courseCount.toString(), gi: 0),
       _StatData(icon: Icons.emoji_events_rounded, label: 'Completed', value: _completedAssignments.toString(), gi: 1),
-      _StatData(icon: Icons.track_changes_rounded, label: 'Goals', value: '8/10', gi: 2),
-      _StatData(icon: Icons.military_tech_rounded, label: 'Rank', value: '#15', gi: 3),
+      const _StatData(icon: Icons.track_changes_rounded, label: 'Goals', value: '8/10', gi: 2),
+      const _StatData(icon: Icons.military_tech_rounded, label: 'Rank', value: '#15', gi: 3),
     ];
     final teacherStats = [
       _StatData(icon: Icons.menu_book_rounded, label: 'Classes', value: _classesCount.toString(), gi: 0),
@@ -541,11 +541,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Text('Help & Support', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           ]),
           const SizedBox(height: 20),
-          _HelpItem(icon: Icons.school_rounded, title: 'How to join a course', desc: 'Ask your teacher or admin to enroll you. Once enrolled, the course appears on your dashboard.'),
-          _HelpItem(icon: Icons.assignment_rounded, title: 'Submitting assignments', desc: 'Go to the Assignments tab, tap the assignment, then tap "Submit" to upload your file.'),
-          _HelpItem(icon: Icons.chat_bubble_rounded, title: 'Messaging teachers', desc: 'Open the Messages tab. Only teachers assigned to your courses will appear as contacts.'),
-          _HelpItem(icon: Icons.notifications_rounded, title: 'Notifications', desc: 'You receive notifications for new announcements, graded assignments, and messages.'),
-          _HelpItem(icon: Icons.lock_rounded, title: 'Forgot your password?', desc: 'Go to Profile → Change Password and enter your current password to set a new one.'),
+          const _HelpItem(icon: Icons.school_rounded, title: 'How to join a course', desc: 'Ask your teacher or admin to enroll you. Once enrolled, the course appears on your dashboard.'),
+          const _HelpItem(icon: Icons.assignment_rounded, title: 'Submitting assignments', desc: 'Go to the Assignments tab, tap the assignment, then tap "Submit" to upload your file.'),
+          const _HelpItem(icon: Icons.chat_bubble_rounded, title: 'Messaging teachers', desc: 'Open the Messages tab. Only teachers assigned to your courses will appear as contacts.'),
+          const _HelpItem(icon: Icons.notifications_rounded, title: 'Notifications', desc: 'You receive notifications for new announcements, graded assignments, and messages.'),
+          const _HelpItem(icon: Icons.lock_rounded, title: 'Forgot your password?', desc: 'Go to Profile → Change Password and enter your current password to set a new one.'),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(14),
@@ -553,10 +553,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               gradient: AppGradients.emerald,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Row(children: [
-              const Icon(Icons.mail_outline_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              const Expanded(
+            child: const Row(children: [
+              Icon(Icons.mail_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
                 child: Text('Contact Admin: admin@educonnect.edu',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               ),
@@ -780,7 +780,7 @@ class _BadgesTab extends StatelessWidget {
             Text(a['desc'] as String, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 2, overflow: TextOverflow.ellipsis),
             if (unlocked) ...[
               const SizedBox(height: 6),
-              Row(children: const [
+              const Row(children: [
                 Icon(Icons.military_tech_rounded, color: Colors.amber, size: 13),
                 SizedBox(width: 4),
                 Text('Unlocked', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber)),
@@ -881,9 +881,9 @@ class _ActivityTabState extends State<_ActivityTab> {
       ));
     }
     if (_items.isEmpty) {
-      return GlassCard(
-        padding: const EdgeInsets.all(24),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [
+      return const GlassCard(
+        padding: EdgeInsets.all(24),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.history_rounded, size: 40, color: AppColors.textSecondary),
           SizedBox(height: 12),
           Text('No recent activity', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),

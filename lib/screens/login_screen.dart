@@ -420,7 +420,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                             child: Text(
                               _isSignup ? 'Login' : 'Sign Up',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppColors.violet,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,

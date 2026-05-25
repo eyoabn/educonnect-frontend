@@ -40,7 +40,8 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
     setState(() => _loading = true);
     try {
       final data = await ApiService.getSubmissions(widget.course?.id ?? '');
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _submissions = data.map((s) => {
           'id': s['id']?.toString() ?? 'unknown',
           'student': s['student'] as String? ?? 'Unknown',
@@ -55,6 +56,7 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
         }).toList();
         _loading = false;
       });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -226,9 +228,9 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 filled: true, fillColor: AppColors.background,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.border)),
+                    borderSide: const BorderSide(color: AppColors.border)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: AppColors.border)),
+                    borderSide: const BorderSide(color: AppColors.border)),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16),
                     borderSide: const BorderSide(color: AppColors.violet, width: 2)),
               ),
@@ -324,7 +326,7 @@ class _GradingScreenState extends State<GradingScreen> with SingleTickerProvider
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                AppBackButton(),
+                const AppBackButton(),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('Grade Work', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
@@ -489,7 +491,7 @@ class _SubmissionCard extends StatelessWidget {
           if (_isGraded && submission['feedback'] != null && (submission['feedback'] as String).isNotEmpty)...[
             const SizedBox(height: 6),
             Text('"${submission['feedback']}"',
-                style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ])),

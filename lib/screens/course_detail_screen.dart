@@ -75,7 +75,7 @@ class CourseDetailScreen extends StatelessWidget {
             child: SafeArea(bottom: false, child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                AppBackButton(),
+                const AppBackButton(),
                 const SizedBox(height: 16),
                 Text(course.name,
                     style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),

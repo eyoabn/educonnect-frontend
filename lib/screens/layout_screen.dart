@@ -143,7 +143,7 @@ class _BottomNav extends StatelessWidget {
           offset: const Offset(0, -4),
         ),
       ],
-      border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+      border: const Border(top: BorderSide(color: AppColors.border, width: 1)),
     ),
     child: SafeArea(
       child: Padding(

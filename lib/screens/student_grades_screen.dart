@@ -82,7 +82,7 @@ class _StudentGradesScreenState extends State<StudentGradesScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                AppBackButton(),
+                const AppBackButton(),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('My Grades', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),

@@ -245,10 +245,10 @@ class _DiscoveryView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [
-                const Icon(Icons.history_rounded, color: AppColors.violet, size: 20),
-                const SizedBox(width: 6),
-                const Text('Recent Searches',
+              const Row(children: [
+                Icon(Icons.history_rounded, color: AppColors.violet, size: 20),
+                SizedBox(width: 6),
+                Text('Recent Searches',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -305,10 +305,10 @@ class _DiscoveryView extends StatelessWidget {
         ],
 
         // Trending
-        Row(children: [
-          const Icon(Icons.trending_up_rounded, color: Colors.orange, size: 20),
-          const SizedBox(width: 6),
-          const Text('Trending',
+        const Row(children: [
+          Icon(Icons.trending_up_rounded, color: Colors.orange, size: 20),
+          SizedBox(width: 6),
+          Text('Trending',
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,

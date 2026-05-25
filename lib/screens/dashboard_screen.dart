@@ -93,10 +93,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       // ignore: avoid_print
       print('Dashboard load error: $e');
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _loading = false;
         _recentAnnouncements = [];
       });
+      }
     }
   }
 
@@ -178,9 +180,9 @@ class _StudentDashboardState extends State<_StudentDashboard> {
           SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverList(
             delegate: SliverChildListDelegate([
               // ── Quick Actions ──────────────────────────────────────────
-              SectionHeader(title: 'Quick Actions'),
+              const SectionHeader(title: 'Quick Actions'),
               const SizedBox(height: 12),
-              _StudentQuickActions(),
+              const _StudentQuickActions(),
               const SizedBox(height: 24),
 
               // ── Recent Announcements ───────────────────────────────
@@ -284,7 +286,7 @@ class _TeacherDashboard extends StatelessWidget {
           SliverPadding(padding: const EdgeInsets.all(16), sliver: SliverList(
             delegate: SliverChildListDelegate([
               // ── Quick Actions ──────────────────────────────────────────
-              SectionHeader(title: 'Quick Actions'),
+              const SectionHeader(title: 'Quick Actions'),
               const SizedBox(height: 12),
               _TeacherQuickActions(courses: courses, onPostCreated: onRefresh),
               const SizedBox(height: 24),
@@ -305,7 +307,7 @@ class _TeacherDashboard extends StatelessWidget {
               const SizedBox(height: 24),
 
               // ── Recent Announcements Posted ────────────────────────────
-              SectionHeader(title: 'Posts You\'ve Made'),
+              const SectionHeader(title: 'Posts You\'ve Made'),
               const SizedBox(height: 12),
               if (announcements.isEmpty)
                 const Padding(
@@ -618,9 +620,9 @@ class _AnnouncementCard extends StatelessWidget {
     padding: const EdgeInsets.all(14),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       if (announcement.pinned) ...[
-        Row(children: [
+        const Row(children: [
           Icon(Icons.push_pin_rounded, size: 14, color: AppColors.orange),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           Text('Pinned', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.orange)),
         ]),
         const SizedBox(height: 6),
@@ -663,7 +665,7 @@ class _StudentCourseCard extends StatelessWidget {
           Text(course.teacher, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(height: 10),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Progress', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            const Text('Progress', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             Text('${course.progress}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: grad.colors.first)),
           ]),
           const SizedBox(height: 4),

@@ -98,7 +98,7 @@ class _QAScreenState extends State<QAScreen> {
                   children: [
                     Row(
                       children: [
-                        AppBackButton(),
+                        const AppBackButton(),
                         const Spacer(),
                         GestureDetector(
                           onTap: _showAskDialog,

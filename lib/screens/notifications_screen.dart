@@ -36,7 +36,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _load() async {
     try {
       final data = await ApiService.getNotifications();
-      if (mounted) setState(() { 
+      if (mounted) {
+        setState(() { 
         _all = data.map((n) => AppNotification(
           id: (n['id'] as num?)?.toInt() ?? 0,
           type: n['type'] as String? ?? 'info',
@@ -46,7 +47,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           read: n['read'] as bool? ?? false,
         )).toList(); 
         _loading = false; 
-      }); 
+      });
+      } 
     } catch (_) {
       if (mounted) setState(() { _all = _mockNotifications; _loading = false; });
     }
@@ -68,7 +70,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _markAllRead() async {
-    setState(() { for (final n in _all) n.read = true; });
+    setState(() { for (final n in _all) {
+      n.read = true;
+    } });
     try { await ApiService.markAllNotificationsRead(); } catch (_) {}
   }
 
